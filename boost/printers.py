@@ -139,8 +139,8 @@ class Printer_Gen(object):
         if not v.basic_type:
             return None
         if _is_boost_multi_index(v):
-            if long(v.address) in Boost_Multi_Index.idx:
-                v.idx = Boost_Multi_Index.idx[long(v.address)]
+            if int(v.address) in Boost_Multi_Index.idx:
+                v.idx = Boost_Multi_Index.idx[int(v.address)]
             else:
                 v.idx = 0
         for subprinter_gen in self.subprinters:
@@ -173,7 +173,7 @@ def _register_printer(Printer):
     return Printer
 
 def _cant_register_printer(Printer):
-    print >> sys.stderr, 'Printer [%s] not supported by this gdb version' % Printer.printer_name
+    print('Printer [%s] not supported by this gdb version' % Printer.printer_name, file=sys.stderr)
     return Printer
 
 def _conditionally_register_printer(condition):
@@ -214,7 +214,7 @@ class BoostIteratorRange:
         def __iter__(self):
             return self
 
-        def next(self):
+        def __next__(self):
             if self.item == self.end:
                 raise StopIteration
             count = self.count
@@ -258,7 +258,7 @@ class BoostOptional:
         def __iter__(self):
             return self
 
-        def next(self):
+        def __next__(self):
             if(self.done):
                 raise StopIteration
             self.done = True
@@ -374,7 +374,7 @@ class BoostCircular:
         def __iter__(self):
             return self
 
-        def next(self):
+        def __next__(self):
             if self.count == self.size:
                 raise StopIteration
             count = self.count
@@ -446,8 +446,8 @@ class BoostVariant:
     def to_string(self):
         m = BoostVariant.regex.search(self.typename)
         # TODO this breaks with boost::variant< foo<a,b>, bar >!
-        types = map(lambda s: s.strip(), m.group(1).split(','))
-        which = long(self.value['which_'])
+        types = [s.strip() for s in m.group(1).split(',')]
+        which = int(self.value['which_'])
         type = types[which]
         data = ''
         try:
@@ -471,7 +471,7 @@ class BoostUuid:
         self.value = value
 
     def to_string(self):
-        u = (self.value['data'][i] for i in xrange(16))
+        u = (self.value['data'][i] for i in range(16))
         s = 'xxxx-xx-xx-xx-xxxxxx'.replace('x', '%02x') % tuple(u)
         return '(%s) %s' % (self.typename, s)
 
@@ -537,7 +537,7 @@ class BoostIntrusiveRbtreeIterator:
             currentElementAddress = self.node.cast(gdb.lookup_type("size_t")) - self.memberOffset
             return currentElementAddress.cast(self.elementPointerType)
 
-    def next(self):
+    def __next__(self):
         # empty set or reached rightmost leaf
         if not self.node:
             raise StopIteration
@@ -576,7 +576,7 @@ class BoostIntrusiveSet:
         def __iter__(self):
             return self
 
-        def next(self):
+        def __next__(self):
             item = self.rbiter.next().dereference()
             result = ('[%d]' % self.count, item)
             self.count = self.count + 1
@@ -663,7 +663,7 @@ class BoostIntrusiveListIterator:
             currentElementAddress = self.node.cast(gdb.lookup_type("size_t")) - self.memberOffset
             return currentElementAddress.cast(self.elementPointerType)
 
-    def next(self):
+    def __next__(self):
         # empty list or reached end
         if not self.node:
             raise StopIteration
@@ -690,7 +690,7 @@ class BoostIntrusiveList:
         def __iter__(self):
             return self
 
-        def next(self):
+        def __next__(self):
             item = self.listiter.next().dereference()
             result = ('[%d]' % self.count, item)
             self.count = self.count + 1
@@ -807,12 +807,12 @@ def _paren_split(s, target_paren = '<'):
     end_paren['{'] = '}'
     end_paren['<'] = '>'
     if target_paren not in open_parens:
-        print >> sys.stderr, 'error: _paren_split: target_paren [' + target_paren + '] must be one of [' + open_parens + ']'
+        print('error: _paren_split: target_paren [' + target_paren + '] must be one of [' + open_parens + ']', file=sys.stderr)
         return None
     paren_stack = []
     res = []
     st = 0
-    for i in xrange(len(s)):
+    for i in range(len(s)):
         if s[i] in open_parens:
             if len(paren_stack) == 0 and s[i] == target_paren:
                 st = i + 1
@@ -847,21 +847,21 @@ def _get_subtype(basic_type, idx):
     "Return the subtype of a given type. idx can be an integer indicating the index of the subtype to be returned, or a list of such indexes, in which case a list of types is returned."
     s = execute(ptype_cmd + ' ' + str(basic_type), True, True)
     if not s.startswith('type = '):
-        print >> sys.stderr, 'error: _get_subtype(' + str(basic_type) + '): s = ' + s
+        print('error: _get_subtype(' + str(basic_type) + '): s = ' + s, file=sys.stderr)
         return None
     s = s[7:]
     s = s.split('\n')[0]
     if not s[-1] == '{':
-        print >> sys.stderr, 'error: _get_subtype(' + str(basic_type) + '): not a class?'
+        print('error: _get_subtype(' + str(basic_type) + '): not a class?', file=sys.stderr)
         return None
     s = s[:-1]
     if len(s.split(' : ')) != 2:
-        print >> sys.stderr, 'error: _get_subtype(' + str(basic_type) + '): no subtypes?'
+        print('error: _get_subtype(' + str(basic_type) + '): no subtypes?', file=sys.stderr)
         return None
     s = 'void< ' + s.split(' : ')[1] + ' >'
     r = _paren_split(s)
     if len(r) == 0:
-        print >> sys.stderr, 'error: _get_subtype(' + str(basic_type) + '): s = ' + s + '; r = ' + str(r)
+        print('error: _get_subtype(' + str(basic_type) + '): s = ' + s + '; r = ' + str(r), file=sys.stderr)
         return None
     if type(idx) == list:
         idx_list = idx
@@ -887,12 +887,12 @@ def _boost_multi_index_get_indexes(v):
     "Save the index types of a multi_index_container in v.indexes."
     v.main_args = _paren_split(str(v.basic_type))
     if len(v.main_args) != 3:
-        print >> sys.stderr, 'error parsing: ' + str(v.basic_type)
+        print('error parsing: ' + str(v.basic_type), file=sys.stderr)
         return False
     arg2_str = str(v.basic_type)[v.main_args[1][0]:v.main_args[1][1]] # the 2nd template arg
     arg2_args = _paren_split(arg2_str)
     if len(arg2_args) == 0:
-        print >> sys.stderr, 'error parsing arg2 of: ' + str(v.basic_type)
+        print('error parsing arg2 of: ' + str(v.basic_type), file=sys.stderr)
         return False
     v.indexes = []
     for r in arg2_args:
@@ -1019,7 +1019,7 @@ class Boost_Multi_Index:
         self.index_type = v.indexes[v.idx]
 
         # node count
-        self.node_count = long(v['node_count'])
+        self.node_count = int(v['node_count'])
 
         # first, we need the element type
         self.elem_type = v.basic_type.template_argument(0)
@@ -1034,10 +1034,10 @@ class Boost_Multi_Index:
         # and retrieve the head node
         header_holder_subtype = _get_subtype(v.basic_type, 1)
         if header_holder_subtype == None:
-            print >> sys.stderr, 'error computing 2nd subtype of ' + str(v.basic_type)
+            print('error computing 2nd subtype of ' + str(v.basic_type), file=sys.stderr)
             return None
         if not str(header_holder_subtype).strip().startswith('boost::multi_index::detail::header_holder'):
-            print >> sys.stderr, '2nd subtype of multi_index_container is not header_holder'
+            print('2nd subtype of multi_index_container is not header_holder', file=sys.stderr)
             return None
         head_node = v.cast(header_holder_subtype)['member'].dereference()
         #print >> sys.stderr, 'head_node.type.sizeof: ' + str(head_node.type.sizeof)
@@ -1047,11 +1047,11 @@ class Boost_Multi_Index:
         # inside the head node
         # to do that, we compute the size of all indexes prior to the current one
         self.index_offset = head_node.type.sizeof
-        for i in xrange(v.idx + 1):
+        for i in range(v.idx + 1):
             self.index_offset -= _boost_multi_index_index_size[v.indexes[i]] * ptr_size
         #print >> sys.stderr, 'index_offset: ' +  str(self.index_offset)
 
-        self.head_index_ptr = long(head_node.address) + self.index_offset
+        self.head_index_ptr = int(head_node.address) + self.index_offset
         #print >> sys.stderr, 'head_index_ptr: ' + hex(self.head_index_ptr)
 
     def empty_cont(self):
@@ -1062,7 +1062,7 @@ class Boost_Multi_Index:
             pass
         def __iter__(self):
             return self
-        def next(self):
+        def __next__(self):
             raise StopIteration
 
     class na_iterator:
@@ -1071,7 +1071,7 @@ class Boost_Multi_Index:
             self.index_type = index_type
         def __iter__(self):
             return self
-        def next(self):
+        def __next__(self):
             if not self.saw_msg:
                 self.saw_msg = True
                 return (self.index_type, 'printer not implemented')
@@ -1080,15 +1080,15 @@ class Boost_Multi_Index:
     class ordered_iterator:
         @staticmethod
         def get_parent_ptr(node_ptr):
-            return long(str(parse_and_eval('*((void**)' + str(node_ptr) + ')')), 16) & (~1L)
+            return int(str(parse_and_eval('*((void**)' + str(node_ptr) + ')')), 16) & (~1)
 
         @staticmethod
         def get_left_ptr(node_ptr):
-            return long(str(parse_and_eval('*((void**)' + str(node_ptr) + ' + 1)')), 16)
+            return int(str(parse_and_eval('*((void**)' + str(node_ptr) + ' + 1)')), 16)
 
         @staticmethod
         def get_right_ptr(node_ptr):
-            return long(str(parse_and_eval('*((void**)' + str(node_ptr) + ' + 2)')), 16)
+            return int(str(parse_and_eval('*((void**)' + str(node_ptr) + ' + 2)')), 16)
 
         def __init__(self, elem_type, index_offset, first, last):
             self.elem_type = elem_type
@@ -1101,7 +1101,7 @@ class Boost_Multi_Index:
         def __iter__(self):
             return self
 
-        def next(self):
+        def __next__(self):
             if self.crt == self.last and self.saw_last:
                 raise StopIteration
             crt = self.crt
@@ -1134,11 +1134,11 @@ class Boost_Multi_Index:
     class sequenced_iterator:
         @staticmethod
         def get_prev_ptr(node_ptr):
-            return long(str(parse_and_eval('*((void**)' + str(node_ptr) + ')')), 16)
+            return int(str(parse_and_eval('*((void**)' + str(node_ptr) + ')')), 16)
 
         @staticmethod
         def get_next_ptr(node_ptr):
-            return long(str(parse_and_eval('*((void**)' + str(node_ptr) + ' + 1)')), 16)
+            return int(str(parse_and_eval('*((void**)' + str(node_ptr) + ' + 1)')), 16)
 
         def __init__(self, elem_type, index_offset, begin, end):
             self.elem_type = elem_type
@@ -1150,7 +1150,7 @@ class Boost_Multi_Index:
         def __iter__(self):
             return self
 
-        def next(self):
+        def __next__(self):
             if self.crt == self.end:
                 raise StopIteration
             crt = self.crt
