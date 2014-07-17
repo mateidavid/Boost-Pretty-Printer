@@ -511,6 +511,7 @@ class BoostIntrusiveSet:
     printer_name = 'boost::intrusive::set'
     version = '1.40'
     type_name_re = '^boost::intrusive::set<.*>$'
+    enabled = False
 
     class _iter:
         def __init__(self, rbiter):
@@ -569,6 +570,7 @@ class BoostIntrusiveTreeIterator:
     printer_name = 'boost::intrusive::tree_iterator'
     version = '1.40'
     type_name_re = '^boost::intrusive::tree_iterator<.*>$'
+    enabled = False
 
     def __init__(self, value):
         self.val = value
@@ -625,6 +627,7 @@ class BoostIntrusiveList:
     printer_name = 'boost::intrusive::list'
     version = '1.40'
     type_name_re = '^boost::intrusive::list<.*>$'
+    enabled = False
 
     class _iter:
         def __init__(self, listiter):
@@ -683,6 +686,7 @@ class BoostIntrusiveListIterator:
     printer_name = 'boost::intrusive::list_iterator'
     version = '1.40'
     type_name_re = '^boost::intrusive::list_iterator<.*>$'
+    enabled = False
 
     def __init__(self, value):
         self.val = value
