@@ -1,0 +1,4 @@
+2014 July 17 - Matei David
+
+  - Fixed Python 3 issues.
+  - Disabled instrusive::set and intrusive::list printers, as they produce errors. They are still loaded and can be enabled from inside GDB.

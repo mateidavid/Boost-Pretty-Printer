@@ -13,8 +13,8 @@ A list of supported Boost classes:
 - boost::array (Boost.Array)
 - boost::variant (Boost.Variant)
 - boost::uuids::uuid (Boost.Uuid) Thanks to Ivan Tarasov (ivant)
-- boost::intrusive::set (Boost.Intrusive) Thanks to Johan Sternerup (johanst)
-- boost::intrusive::list (Boost.Intrusive) "
+- boost::intrusive::set 1.40 (Boost.Intrusive) Thanks to Johan Sternerup (johanst)
+- boost::intrusive::list 1.40 (Boost.Intrusive) "
 - boost::gregorian::date (Boost.Date_Time) Thanks to Brian O'Kennedy (brokenn)
 - boost::posix_time::ptime (Boost.Date_Time) "
 - boost::circular_buffer (Boost.Circular_Buffer) Thanks to Luc Hermitte
