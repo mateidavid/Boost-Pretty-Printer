@@ -1,3 +1,4 @@
+set pagination off
 b done
 r
 p v_iterator_range_1
