@@ -55,7 +55,10 @@ class Printer_Gen(object):
 
         def __init__(self, Printer):
             self.name = Printer.printer_name + '-' + Printer.version
-            self.enabled = True
+            if hasattr(Printer, 'enabled'):
+                self.enabled = Printer.enabled
+            else:
+                self.enabled = True
             if hasattr(Printer, 'supports'):
                 self.re = None
                 self.supports = Printer.supports
@@ -135,6 +138,7 @@ def _conditionally_register_printer(condition):
 ### - 'type_name_re' : If 'supports(basic_type)' doesn't exist, a default
 ###     version is used which simply tests whether the type name matches this
 ###     re. (Either supports() or type_name_re is required.)
+### - 'enabled' : If this exists and is set to false, disable printer.
 ### - '__init__' : Its only argument is a GDB_Value_Wrapper.
 ###
 
