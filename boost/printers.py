@@ -366,7 +366,7 @@ class BoostArray:
         self.value = value
 
     def to_string(self):
-        return self.value['elems']
+        return str(self.value['elems'])
 
     def display_hint(self):
         return 'array'
