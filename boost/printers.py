@@ -33,71 +33,18 @@
 #
 
 import gdb
+import gdb.types
+import gdb.printing
 import re
 import sys
 
-_have_gdb_printing = True
-try:
-    import gdb.printing
-except ImportError:
-    _have_gdb_printing = False
+# check "ptype/mtr" is supported
+gdb.execute('ptype/mtr void', True, True)
 
-try:
-    from gdb.types import get_basic_type
-except ImportError:
-    # from libstdcxx printers
-    def get_basic_type(type):
-        # If it points to a reference, get the reference.
-        if type.code == gdb.TYPE_CODE_REF:
-            type = type.target()
 
-        # Get the unqualified type, stripped of typedefs.
-        type = type.unqualified().strip_typedefs()
-
-        return type
-
-from gdb import execute
-_have_execute_to_string = True
-try:
-    s = execute('help', True, True)
-    # detect how to invoke ptype
-    ptype_cmd = 'ptype/mtr'
-    try:
-        gdb.execute(ptype_cmd + ' void', True, True)
-    except RuntimeError:
-        ptype_cmd = 'ptype'
-except TypeError:
-    _have_execute_to_string = False
-
-try:
-    from gdb import parse_and_eval
-except ImportError:
-    # from http://stackoverflow.com/a/2290941/717706
-    def parse_and_eval(exp):
-        if gdb.VERSION.startswith("6.8.50.2009"):
-            return gdb.parse_and_eval(exp)
-        # Work around non-existing gdb.parse_and_eval as in released 7.0
-        gdb.execute("set logging redirect on")
-        gdb.execute("set logging on")
-        gdb.execute("print %s" % exp)
-        gdb.execute("set logging off")
-        return gdb.history(0)
-
-try:
-    class GDB_Value_Wrapper(gdb.Value):
-        "Wrapper class for gdb.Value that allows setting extra properties."
-        def __init__(self, value):
-            super(GDB_Value_Wrapper, self).__init__(value)
-            self.__dict__ = {}
-except TypeError:
-    class GDB_Value_Wrapper():
-        "Wrapper class for gdb.Value that allows setting extra properties."
-        def __init__(self, value):
-            self.gdb_value = value
-            self.__dict__ = {}
-            self.__dict__['type'] = value.type
-            self.__dict__['address'] = value.address
-            self.__getitem__ = value.__getitem__
+class GDB_Value_Wrapper(gdb.Value):
+    "Wrapper class for gdb.Value that allows setting custom attributes."
+    pass
 
 
 class Printer_Gen(object):
@@ -135,7 +82,7 @@ class Printer_Gen(object):
 
     def __call__(self, value):
         v = GDB_Value_Wrapper(value)
-        v.basic_type = get_basic_type(v.type)
+        v.basic_type = gdb.types.get_basic_type(v.type)
         if not v.basic_type:
             return None
         if _is_boost_multi_index(v):
@@ -156,15 +103,8 @@ printer_gen = Printer_Gen('boost')
 # This should be called from .gdbinit.
 def register_printer_gen(obj):
     "Register printer generator with objfile obj."
+    gdb.printing.register_pretty_printer(obj, printer_gen)
 
-    global printer_gen
-
-    if _have_gdb_printing:
-        gdb.printing.register_pretty_printer(obj, printer_gen)
-    else:
-        if obj is None:
-            obj = gdb
-        obj.pretty_printers.append(printer_gen)
 
 # Register individual Printer with the top-level Printer generator.
 def _register_printer(Printer):
@@ -845,7 +785,7 @@ def _strip_inheritance_qual(s):
 
 def _get_subtype(basic_type, idx):
     "Return the subtype of a given type. idx can be an integer indicating the index of the subtype to be returned, or a list of such indexes, in which case a list of types is returned."
-    s = execute(ptype_cmd + ' ' + str(basic_type), True, True)
+    s = gdb.execute('ptype/mtr ' + str(basic_type), True, True)
     if not s.startswith('type = '):
         print('error: _get_subtype(' + str(basic_type) + '): s = ' + s, file=sys.stderr)
         return None
@@ -949,7 +889,7 @@ _boost_multi_index_index_size['boost::multi_index::random_access'] = 1
 # parse_and_eval() that can be broken by as little as output formatting changes.
 #
 
-@_conditionally_register_printer(_have_execute_to_string)
+@_register_printer
 class Boost_Multi_Index:
     "Printer for boost::multi_index_container"
     printer_name = 'boost::multi_index_container'
@@ -1080,15 +1020,15 @@ class Boost_Multi_Index:
     class ordered_iterator:
         @staticmethod
         def get_parent_ptr(node_ptr):
-            return int(str(parse_and_eval('*((void**)' + str(node_ptr) + ')')), 16) & (~1)
+            return int(str(gdb.parse_and_eval('*((void**)' + str(node_ptr) + ')')), 16) & (~1)
 
         @staticmethod
         def get_left_ptr(node_ptr):
-            return int(str(parse_and_eval('*((void**)' + str(node_ptr) + ' + 1)')), 16)
+            return int(str(gdb.parse_and_eval('*((void**)' + str(node_ptr) + ' + 1)')), 16)
 
         @staticmethod
         def get_right_ptr(node_ptr):
-            return int(str(parse_and_eval('*((void**)' + str(node_ptr) + ' + 2)')), 16)
+            return int(str(gdb.parse_and_eval('*((void**)' + str(node_ptr) + ' + 2)')), 16)
 
         def __init__(self, elem_type, index_offset, first, last):
             self.elem_type = elem_type
@@ -1128,17 +1068,17 @@ class Boost_Multi_Index:
             self.count = self.count + 1
             val_ptr = Boost_Multi_Index.get_val_ptr(crt, self.index_offset)
             return ('[%s]' % hex(int(val_ptr)),
-                    str(parse_and_eval('*(' + str(self.elem_type) + '*)'
-                                       + str(val_ptr))))
+                    str(gdb.parse_and_eval('*(' + str(self.elem_type) + '*)'
+                                           + str(val_ptr))))
 
     class sequenced_iterator:
         @staticmethod
         def get_prev_ptr(node_ptr):
-            return int(str(parse_and_eval('*((void**)' + str(node_ptr) + ')')), 16)
+            return int(str(gdb.parse_and_eval('*((void**)' + str(node_ptr) + ')')), 16)
 
         @staticmethod
         def get_next_ptr(node_ptr):
-            return int(str(parse_and_eval('*((void**)' + str(node_ptr) + ' + 1)')), 16)
+            return int(str(gdb.parse_and_eval('*((void**)' + str(node_ptr) + ' + 1)')), 16)
 
         def __init__(self, elem_type, index_offset, begin, end):
             self.elem_type = elem_type
@@ -1159,8 +1099,8 @@ class Boost_Multi_Index:
             self.count = self.count + 1
             val_ptr = Boost_Multi_Index.get_val_ptr(crt, self.index_offset)
             return ('[%s]' % hex(int(val_ptr)),
-                    str(parse_and_eval('*(' + str(self.elem_type) + '*)'
-                                       + str(val_ptr))))
+                    str(gdb.parse_and_eval('*(' + str(self.elem_type) + '*)'
+                                           + str(val_ptr))))
 
     def children(self):
         if self.empty_cont():
