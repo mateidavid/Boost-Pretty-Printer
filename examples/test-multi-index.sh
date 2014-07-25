@@ -4,7 +4,7 @@ if [ -x test-multi-index ] && [ test-multi-index -nt test-multi-index.cpp ]; the
     echo "test-multi-index: exists" >&2
 else
     echo "test-multi-index: compiling" >&2
-    g++ -g -std=c++0x -Wall -Wextra -o test-multi-index test-multi-index.cpp ||
+    g++ -O0 -g3 -fno-inline -std=c++0x -Wall -Wextra -o test-multi-index test-multi-index.cpp ||
     {
         echo "compilation failed" >&2
         exit 1

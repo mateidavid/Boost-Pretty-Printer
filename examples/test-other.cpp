@@ -74,6 +74,9 @@ typedef boost::intrusive::set< MyClass, boost::intrusive::compare<std::greater<M
 boost::intrusive::set<MyClass> v_intrusive_set_1;
 boost::intrusive::set<MyClass> v_intrusive_set_2;
 
+boost::intrusive::set<MyClass>::iterator v_intrusive_set_iterator_1;
+boost::intrusive::set<MyClass>::iterator v_intrusive_set_iterator_2;
+
 class MyClass_list : public boost::intrusive::list_base_hook<>   //This is a derivation hook
 {
    int int_;
@@ -89,6 +92,9 @@ class MyClass_list : public boost::intrusive::list_base_hook<>   //This is a der
 
 boost::intrusive::list<MyClass_list> v_intrusive_list_1;
 boost::intrusive::list<MyClass_list> v_intrusive_list_2;
+
+boost::intrusive::list<MyClass_list>::iterator v_intrusive_list_iterator_1;
+boost::intrusive::list<MyClass_list>::iterator v_intrusive_list_iterator_2;
 
 boost::gregorian::date v_gregorian_date_1;
 boost::gregorian::date v_gregorian_date_2(boost::gregorian::day_clock::local_day());
@@ -108,9 +114,15 @@ int main(int argc, char* argv[])
 
     MyClass tmp(x);
     v_intrusive_set_2.insert(tmp);
+    v_intrusive_set_iterator_2 = v_intrusive_set_2.begin();
+    (void)v_intrusive_set_1.begin();
+    (void)v_intrusive_set_1.end();
 
     MyClass_list tmp_list(x);
     v_intrusive_list_2.push_front(tmp_list);
+    v_intrusive_list_iterator_2 = v_intrusive_list_2.begin();
+    (void)v_intrusive_list_1.begin();
+    (void)v_intrusive_list_1.end();
 
     int r = done();  // break here
     r += argc + (char)argv[0][0];

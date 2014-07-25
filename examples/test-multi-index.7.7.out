@@ -24,6 +24,6 @@ $4 = boost::multi_index_container<int, indexed_by<sequenced<>, ordered_unique<id
 $5 = boost::multi_index_container<int, indexed_by<sequenced<>, ordered_unique<identity<int>>, random_access<>, ordered_non_unique<global_fun<int, int, negative>>, hashed_non_unique<identity<int>>>>[idx=4] = {boost::multi_index::hashed_non_unique = printer not implemented}
 A debugging session is active.
 
-	Inferior 1 [process 6962] will be killed.
+	Inferior 1 [process 30780] will be killed.
 
 Quit anyway? (y or n) [answered Y; input not from terminal]

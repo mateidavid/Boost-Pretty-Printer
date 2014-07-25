@@ -100,13 +100,28 @@ class Printer_Gen(object):
         return None
 
 
+class Type_Printer_Gen:
+    "Type Printer Generator"
+
+    def __init__(self, Type_Recognizer):
+        self.name = Type_Recognizer.name
+        self.enabled = Type_Recognizer.enabled
+        self.Type_Recognizer = Type_Recognizer
+
+    def instantiate(self):
+        return self.Type_Recognizer()
+
+
 printer_gen = Printer_Gen('boost')
+type_printer_list = list()
 
 # This function registers the top-level Printer generator with gdb.
 # This should be called from .gdbinit.
 def register_printer_gen(obj):
     "Register printer generator with objfile obj."
     gdb.printing.register_pretty_printer(obj, printer_gen)
+    for tp in type_printer_list:
+        gdb.types.register_type_printer(obj, tp)
 
 
 # Register individual Printer with the top-level Printer generator.
@@ -124,6 +139,11 @@ def _conditionally_register_printer(condition):
         return _register_printer
     else:
         return _cant_register_printer
+
+def _register_type_recognizer(Type_Recognizer):
+    type_printer_list.append(Type_Printer_Gen(Type_Recognizer))
+    return Type_Recognizer
+
 
 ###
 ### Individual Printers follow.
@@ -693,6 +713,331 @@ class BoostIntrusiveListIterator:
 
     def to_string(self):
         return intrusive_iterator_to_string(self.val)
+
+#
+# Intrusive containers 1.55
+#
+
+class _aux_save_value_as_variable(gdb.Function):
+    def __init__(self, v):
+        super(_aux_save_value_as_variable, self).__init__('_aux_save_value_as_variable')
+        self.value = v
+    def invoke(self):
+        return self.value
+
+def save_value_as_variable(v, s):
+    """Save gdb.Value v as gdb variable s."""
+    assert isinstance(v, gdb.Value), 'arg 1 not a gdb.Value'
+    assert isinstance(s, str), 'arg 2 not a string'
+    _aux_save_value_as_variable(v)
+    gdb.execute('set var ' + s + ' = $_aux_save_value_as_variable()')
+
+def shorten_ns(tag):
+    if tag.startswith('boost::intrusive::'):
+        return 'bi::' + tag[18:]
+    else:
+        return tag
+
+def apply_method(v, f):
+    """Apply method to given value."""
+    assert isinstance(v, gdb.Value), 'arg 1 not a gdb.Value'
+    assert isinstance(f, str), 'arg 2 not a string'
+    if v.address:
+        # use hack by taking address; this might work even when f() involves references
+        return gdb.parse_and_eval('((' + str(v.type.strip_typedefs()) + ' *)' + str(int(v.address)) + ')->' + f + '()')
+    else:
+        # use inferior value
+        save_value_as_variable(v, '$_v')
+        return gdb.parse_and_eval('$_v.' + f + '()')
+
+@_register_type_recognizer
+class IGeneric_Hook_Type_Recognizer:
+    "Type Recognizer for boost::intrusive::generic_hook"
+    name = 'boost::intrusive::generic_hook (1.55.0)'
+    enabled = True
+    target_re = re.compile('^boost::intrusive::generic_hook<.*>$')
+
+    def recognize(self, t):
+        if not t.tag or self.target_re.search(t.tag) == None:
+            return None
+        # hook_tag: default (base) or member
+        hook_tag = t.template_argument(1).strip_typedefs().tag
+        # link mode
+        link_mode = str(t.template_argument(2)).split('::')[2]
+        # node_type: first subclass, or the first subclass of the first subclass
+        node_t = t.fields()[0].type
+        if node_t.strip_typedefs().tag.startswith('boost::intrusive::node_holder'):
+            node_t = node_t.fields()[0].type
+        node_tag = node_t.strip_typedefs().tag
+        return 'bi::generic_hook< '+ shorten_ns(node_tag) + ', ' + shorten_ns(hook_tag) + ', ' + link_mode + ' >'
+
+@_register_printer
+class IGeneric_Hook_Printer:
+    "Pretty Printer for boost::intrusive::generic_hook"
+    printer_name = 'boost::intrusive::generic_hook'
+    version = '1.55'
+    type_name_re = '^boost::intrusive::generic_hook<.*>$'
+    enabled = True
+
+    def __init__(self, value):
+        self.value = value
+
+    def to_string(self):
+        # the actual node is either the first subclass, or the first subclass of the first subclass
+        node = self.value.cast(self.value.type.fields()[0].type)
+        if node.type.strip_typedefs().tag.startswith('boost::intrusive::node_holder'):
+            node = node.cast(node.type.fields()[0].type)
+        return str(node)
+
+@_register_type_recognizer
+class IHook_Type_Recognizer:
+    "Type Recognizer for boost::intrusive::*_(base|member)_hook"
+    name = 'boost::intrusive::*_(base|member)_hook (1.55.0)'
+    enabled = True
+    target_re = re.compile('^boost::intrusive::(avl_set|bs_set|list|set|slist|splay_set|unordered_set)_(base|member)_hook<.*>$')
+
+    def recognize(self, t):
+        if not t.tag or not self.target_re.search(t.tag):
+            return None
+        # just print the underlying generic hook
+        generic_hook_t = t.fields()[0].type
+        return IGeneric_Hook_Type_Recognizer().recognize(generic_hook_t)
+
+@_register_printer
+class IHook_Printer:
+    "Pretty Printer for boost::intrusive::*_(base|member)_hook"
+    printer_name = 'boost::intrusive::*_(base|member)_hook'
+    version = '1.55'
+    type_name_re = '^boost::intrusive::(avl_set|bs_set|list|set|slist|splay_set|unordered_set)_(base|member)_hook<.*>$'
+    enabled = True
+
+    def __init__(self, value):
+        self.val = value
+
+    def to_string(self):
+        # cast to and print underlying generic hook
+        generic_hook_t = self.val.type.fields()[0].type
+        generic_hook = self.val.cast(generic_hook_t)
+        return str(generic_hook)
+
+class _ilist_get_root_node(gdb.Function):
+    """Get node_ptr pointing to the root of an intrusive list. Argument must be a program variable."""
+    def __init__(self):
+        super(_ilist_get_root_node, self).__init__('_ilist_get_root_node')
+    def invoke(self, l_str_gdb):
+        # check we are passed a string
+        if not str(l_str_gdb.type).startswith('char ['):
+            print('_ilist_get_root_node: arg must be a gdb variable name; type given: ' + str(l_str_gdb.type), file=sys.stderr)
+            return None
+        # remove enclosing double quotes
+        l_str = str(l_str_gdb)[1:-1]
+        # load variable as gdb.Value
+        l = gdb.selected_frame().read_var(l_str)
+        # check it's a bi::list
+        if not str(l.type.strip_typedefs()).startswith('boost::intrusive::list<'):
+            print('_ilist_get_root_node: arg must be a bi::list; given: ' + str(l.type.strip_typedefs()), file=sys.stderr)
+            return None
+        # fetch node_ptr type
+        node_ptr_t = gdb.lookup_type(str(l.type.fields()[0].type.strip_typedefs()) + '::node_ptr')
+        return gdb.parse_and_eval('boost::intrusive::pointer_traits<' + str(node_ptr_t.strip_typedefs()) + '>::pointer_to(' + l_str + '.data_.root_plus_size_.root_)')
+#_ilist_get_root_node()
+
+_bi_value_traits = dict()
+def _bi_get_value_traits(cont_t):
+    """Get value_traits type from container type."""
+    assert isinstance(cont_t, gdb.Type), 'arg not a gdb.Type'
+    # use value saved in table, if available
+    if str(cont_t.strip_typedefs()) in _bi_value_traits:
+        t = gdb.lookup_type(_bi_value_traits[str(cont_t.strip_typedefs())])
+    else:
+        try:
+            t = gdb.lookup_type(str(cont_t.strip_typedefs()) + '::value_traits')
+        except gdb.error:
+            # also try first template argument of first subclass
+            try:
+                t = cont_t.strip_typedefs().fields()[0].type.template_argument(0)
+            except:
+                print('_bi_get_value_traits: value_traits typedef missing from container type\n' +
+                      '_bi_get_value_traits: to work around this, add it manually with, e.g.:\n' +
+                      '_bi_get_value_traits: \'py import boost.printers\'\n' +
+                      '_bi_get_value_traits: \'py boost.printers._bi_value_traits["'
+                      + str(cont_t.strip_typedefs()) + '"]="<value_traits_type>"\'',
+                      file=sys.stderr)
+                raise gdb.error
+    return t
+
+_bi_node_traits = dict()
+def _bi_get_node_traits(value_traits_t):
+    """Get node_traits type from value_traits type."""
+    assert isinstance(value_traits_t, gdb.Type), 'arg not a gdb.Type'
+    # use value saved in table, if available
+    if str(value_traits_t.strip_typedefs()) in _bi_node_traits:
+        t = gdb.lookup_type(_bi_node_traits[str(value_traits_t.strip_typedefs())])
+    else:
+        try:
+            t = gdb.lookup_type(str(value_traits_t.strip_typedefs()) + '::node_traits')
+        except gdb.error:
+            # missing typedef...
+            if (str(value_traits_t.strip_typedefs()).startswith('boost::intrusive::bhtraits<')
+                or str(value_traits_t.strip_typedefs()).startswith('boost::intrusive::mhtraits<')):
+                # for builtin (b|m)htraits, node_traits is second template parameter
+                t = value_traits_t.template_argument(1)
+            elif str(value_traits_t.strip_typedefs()).startswith('boost::intrusive::trivial_value_traits<'):
+                # for builtin trivial_value_traits, node_traits is first template parameter
+                t = value_traits_t.template_argument(0)
+            else:
+                print('_bi_get_node_traits: node_traits typedef missing from value_traits type\n' +
+                      '_bi_get_node_traits: to work around this, add it manually with, e.g.:\n' +
+                      '_bi_get_node_traits: \'py import boost.printers\'\n' +
+                      '_bi_get_node_traits: \'py boost.printers._bi_node_traits["'
+                      + str(value_traits_t.strip_typedefs()) + '"]="<node_traits_type>"\'',
+                      file=sys.stderr)
+                raise gdb.error
+    return t
+
+_bi_to_value_ptr = dict()
+def _bi_apply_to_value_ptr(value_traits_t, node_ptr):
+    """Get value_ptr from node_ptr. value_traits_t is a gdb.Type, node_ptr is a gdb.Value."""
+    assert isinstance(value_traits_t, gdb.Type), 'arg 1 not a gdb.Type'
+    assert isinstance(node_ptr, gdb.Value), 'arg 2 not a gdb.Value'
+    # use convenience method saved in table, if available
+    if str(value_traits_t.strip_typedefs()) in _bi_to_value_ptr:
+        val_ptr = _bi_to_value_ptr[str(value_traits_t.strip_typedefs())](node_ptr)
+    elif str(value_traits_t.strip_typedefs()).startswith('boost::intrusive::trivial_value_traits<'):
+        val_ptr = node_ptr
+    elif str(value_traits_t.strip_typedefs()).startswith('boost::intrusive::bhtraits<'):
+        # internal base hook traits
+        # this will fail (give wrong answer?) if the val struct has multiple bases of type list_node
+        val_ptr_t = gdb.lookup_type(str(value_traits_t.strip_typedefs()) + '::pointer')
+        val_ptr = node_ptr.cast(val_ptr_t)
+    elif str(value_traits_t.strip_typedefs()).startswith('boost::intrusive::mhtraits<'):
+        # internal member hook traits
+        # offset is 3rd template argument
+        offset = value_traits_t.template_argument(2)
+        assert isinstance(offset, gdb.Value), '3rd template argument of mhtraits should be a member pointer'
+        offset_int = int(offset)
+        node_ptr_int = int(node_ptr)
+        val_ptr_t = gdb.lookup_type(str(value_traits_t.strip_typedefs()) + '::pointer')
+        val_ptr = gdb.parse_and_eval(str(val_ptr_t) + '(' + str(node_ptr_int - offset_int) + ')')
+    else:
+        # try to call value_traits_t::to_value_ptr()
+        save_value_as_variable(node_ptr, '$_node_ptr')
+        try:
+            val_ptr = gdb.parse_and_eval(str(value_traits_t) + '::to_value_ptr($_node_ptr)')
+        except:
+            print('_bi_apply_to_value_ptr: could not apply ' + str(value_traits_t.strip_typedefs()) + '::to_value_ptr()\n' +
+                  '_bi_apply_to_value_ptr: most likely, existing version involves references, and call involves inferior values\n' +
+                  '_bi_apply_to_value_ptr: to work around this, write a new python function, then register it with:\n' +
+                  '_bi_apply_to_value_ptr: \'py import boost.printers\'\n' +
+                  '_bi_apply_to_value_ptr: \'py boost.printers._bi_to_value_ptr["' + str(value_traits_t.strip_typedefs()) + '"]=<python_function>',
+                  file=sys.stderr)
+            raise gdb.error
+    return val_ptr
+
+_bi_get_next = dict()
+def _bi_apply_get_next(node_traits_t, node_ptr):
+    """Apply node_traits::get_next(). node_traits_t is a gdb.Type, node_ptr is a gdb.Value."""
+    assert isinstance(node_traits_t, gdb.Type), 'arg 1 not a gdb.Type'
+    assert isinstance(node_ptr, gdb.Value), 'arg 2 not a gdb.Value'
+    # use convenience method saved in table, if available
+    if str(node_traits_t.strip_typedefs()) in _bi_get_next:
+        next_node_ptr = _bi_get_next[str(node_traits_t.strip_typedefs())](node_ptr)
+    elif (str(node_traits_t.strip_typedefs()).startswith('boost::intrusive::list_node_traits<')
+          or str(node_traits_t.strip_typedefs()).startswith('boost::intrusive::slist_node_traits<')):
+        next_node_ptr = node_ptr['next_']
+    else:
+        # try to call node_traits_t::get_next()
+        save_value_as_variable(node_ptr, '$_node_ptr')
+        try:
+            next_node_ptr = gdb.parse_and_eval(str(node_traits_t) + '::get_next($_node_ptr)')
+        except:
+            print('_bi_apply_get_next: could not apply ' + str(node_traits_t.strip_typedefs()) + '::get_next()\n' +
+                  '_bi_apply_get_next: most likely, existing version involves references, and call involves inferior values\n' +
+                  '_bi_apply_get_next: to work around this, write a new python function, then register it with:\n' +
+                  '_bi_apply_get_next: \'py import boost.printers\'\n' +
+                  '_bi_apply_get_next: \'py boost.printers._bi_get_next["' + str(node_traits_t.strip_typedefs()) + '"]=<python_function>',
+                  file=sys.stderr)
+            raise gdb.error
+    return next_node_ptr
+
+def value_from_iiterator(it):
+    value_traits_t = it.type.template_argument(0)
+    node_ptr = it['members_']['nodeptr_']
+    value_ptr = _bi_apply_to_value_ptr(value_traits_t, node_ptr)
+    return value_ptr.referenced_value()
+
+@_register_printer
+class IIterator_Printer:
+    "Pretty Printer for boost::intrusive::(list|slist|tree)_iterator"
+    printer_name = 'boost::intrusive::(list|slist|tree)_iterator'
+    version = '1.55'
+    type_name_re = '^boost::intrusive::(list|slist|tree)_iterator<.*>$'
+    enabled = True
+
+    def __init__(self, value):
+        self.val = value
+
+    def to_string(self):
+        try:
+            value_str = str(value_from_iiterator(self.val))
+        except:
+            value_str = 'N/A'
+        return str(self.val['members_']['nodeptr_']) + ' -> ' + value_str
+
+@_register_printer
+class IList_Printer:
+    "Pretty Printer for boost::intrusive::list"
+    printer_name = 'boost::intrusive::list'
+    version = '1.55'
+    type_name_re = '^boost::intrusive::list<.*>$'
+    enabled = True
+
+    class Iterator:
+        def __init__(self, l):
+            self.value_traits_t = _bi_get_value_traits(l.type)
+            self.node_traits_t = _bi_get_node_traits(self.value_traits_t)
+            self.root_node_ptr = apply_method(l, 'get_root_node')
+
+        def __iter__(self):
+            self.count = 0
+            self.crt_node_ptr = _bi_apply_get_next(self.node_traits_t, self.root_node_ptr)
+            return self
+
+        def __next__(self):
+            if self.crt_node_ptr == self.root_node_ptr:
+                raise StopIteration
+            val_ptr = _bi_apply_to_value_ptr(self.value_traits_t, self.crt_node_ptr)
+            try:
+                val_str = str(val_ptr.referenced_value())
+            except:
+                val_str = 'N/A'
+            result = ('[%d, %s]' % (self.count, hex(int(val_ptr))), val_str)
+            self.count = self.count + 1
+            self.crt_node_ptr = _bi_apply_get_next(self.node_traits_t, self.crt_node_ptr)
+            return result
+
+    def __init__(self, l):
+        self.l = l
+        self.value_type = self.l.type.template_argument(0)
+
+    def empty(self):
+        it_begin = apply_method(self.l, 'begin')
+        it_end = apply_method(self.l, 'end')
+        return it_begin['members_']['nodeptr_'] == it_end['members_']['nodeptr_']
+
+    def to_string (self):
+        return "bi::list<%s>" % self.value_type.strip_typedefs()
+
+        if False and (intrusive_container_has_size_member(self.l.type)):
+            return "bi::list<%s> with %d elements" % (self.value_type, self.getSize())
+        elif not self.empty():
+            return "non-empty bi::list<%s>" % self.value_type
+        else:
+            return "empty bi::list<%s>" % self.value_type.strip_typedefs()
+
+    def children (self):
+        return self.Iterator(self.l)
+
 
 @_register_printer
 class BoostGregorianDate:
