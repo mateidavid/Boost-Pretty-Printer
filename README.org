@@ -72,3 +72,44 @@ Hashed and Random-Access indexes are not currently supported, though with the de
 will capture them and display an appropriate message.
 It is possible to specify which index to use for printing a specific container dynamically, from inside GDB.
 See the =examples= folder.
+
+* Intrusive Containers
+
+Added support for printing intrusive lists (singly- and doubly-linked), as well
+as ordered sets and multisets. Unordered sets and hashmaps are not supported.
+
+* Working Around Traits-Class Related Errors
+
+Certain containers (notably, intrusive) are heavily customized using traits
+classes, and without access to those, one cannot print the containers reliably.
+Unfortunately, `gdb` is occasionally missing crucial inner typedefs.  E.g., in
+my tests I usually don't see the `node_traits` typedef inside various
+`value_traits` classes. To work around this limitation, this package provides a
+way to bypass the inner type resolution from inside gdb by using the variable
+`boost_print.bypass_inner_type`.
+
+Another complication is due to the fact that several builtin value- and
+node-traits classes are poorly suited to work with gdb inferior variables
+(living in gdb memory but not in program memory). A function taking a reference
+parameter (even const reference) cannot work with inferior variables.  This
+package also provides a way to bypass (rewrite) certain functions from inside
+gdb.
+
+For example usage of this bypass mechanism, see the `test-intrusive` example
+(code and gdb commands).
+
+* Trivial Printers
+
+This package also provides a convenient way to define trivial printers from
+inside gdb.  For example, suppose the type `SomeType` contains a field `height`,
+and we want to print `v.height` instead of `v` for objects of type `SomeType`.
+This can be achieved as follows:
+
+#+BEGIN_EXAMPLE
+  py boost_print.add_trivial_printer("SomeType", lambda v: v['height'])
+#+END_EXAMPLE
+
+The printer can be subsequently disabled with:
+#+BEGIN_EXAMPLE
+  disable pretty-print global trivial;SomeType
+#+END_EXAMPLE

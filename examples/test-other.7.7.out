@@ -1,3 +1,5 @@
+test-other: compiling
+test-other: invoking gdb
 GNU gdb (Ubuntu 7.7-0ubuntu3.1) 7.7
 Copyright (C) 2014 Free Software Foundation, Inc.
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
@@ -13,10 +15,10 @@ Find the GDB manual and other documentation resources online at:
 For help, type "help".
 Type "apropos word" to search for commands related to "word"...
 Reading symbols from test-other...done.
-Breakpoint 1 at 0x401631: file test-other.cpp, line 107.
+Breakpoint 1 at 0x401631: file test-other.cpp, line 58.
 
-Breakpoint 1, done () at test-other.cpp:107
-107	    return 0;
+Breakpoint 1, done () at test-other.cpp:58
+58	    return 0;
 $1 = boost::iterator_range<char*> of length 0
 $2 = boost::iterator_range<char*> of length 2 = {108 'l', 108 'l'}
 $3 = boost::optional<int> is not initialized
@@ -25,9 +27,9 @@ $5 = (boost::reference_wrapper<int>) 42
 $6 = (boost::logic::tribool) false
 $7 = (boost::logic::tribool) indeterminate
 $8 = (boost::scoped_ptr<int>) 0x0
-$9 = (boost::scoped_ptr<int>) 0x617010
+$9 = (boost::scoped_ptr<int>) 0x611010
 $10 = (boost::shared_ptr<int>) 0x0
-$11 = (boost::shared_ptr<int>) (count 1, weak count 1) 0x617030
+$11 = (boost::shared_ptr<int>) (count 1, weak count 1) 0x611030
 $12 = boost::circular_buffer<int, std::allocator<int> > of length 0/0
 $13 = boost::circular_buffer<int, std::allocator<int> > of length 2/3 = {1, 4}
 $14 = {0x0, 0x0, 0x0}
@@ -36,20 +38,12 @@ $16 = (boost::variant<...>) which (0) = int value = 0
 $17 = (boost::variant<...>) which (1) = int value = 42
 $18 = (boost::uuids::uuid) 00000000-0000-0000-0000-000000000000
 $19 = (boost::uuids::uuid) 01234567-89ab-cdef-0123-456789abcdef
-$20 = {<boost::intrusive::set_impl<boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>, void, unsigned long, true>> = {<boost::intrusive::bstree_impl<boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>, void, unsigned long, true, (boost::intrusive::algo_types)4>> = {<boost::intrusive::bstbase<boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>, void, true, unsigned long, (boost::intrusive::algo_types)4>> = {<boost::intrusive::detail::size_holder<true, unsigned long, void>> = {static constant_time_size = <optimized out>, size_ = 0}, <boost::intrusive::bstbase2<boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>, void, (boost::intrusive::algo_types)4>> = {<boost::intrusive::bstbase3<boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>, (boost::intrusive::algo_types)4>> = {<boost::intrusive::compact_rbtree_node<void*>> = {parent_ = 0x0, left_ = 0x6165c8 <v_intrusive_set_1+8>, right_ = 0x6165c8 <v_intrusive_set_1+8>}, <boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>> = {<boost::intrusive::bhtraits_base<MyClass, boost::intrusive::compact_rbtree_node<void*>*, boost::intrusive::default_tag, 3u>> = {<No data fields>}, static link_mode = <optimized out>}, static external_value_traits = <optimized out>, static safemode_or_autounlink = <optimized out>, static stateful_value_traits = <optimized out>}, <boost::intrusive::detail::ebo_functor_holder<std::less<MyClass> >> = {<boost::intrusive::detail::ebo_functor_holder_impl<std::less<MyClass>, false>> = {<std::less<MyClass>> = {<std::binary_function<MyClass, MyClass, bool>> = {<No data fields>}, <No data fields>}, <No data fields>}, <No data fields>}, <No data fields>}, <No data fields>}, <boost::intrusive::detail::clear_on_destructor_base<boost::intrusive::bstree_impl<boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>, void, unsigned long, true, (boost::intrusive::algo_types)4>, true>> = {<No data fields>}, static external_value_traits = <optimized out>, static constant_time_size = true, static stateful_value_traits = <optimized out>, static safemode_or_autounlink = <optimized out>}, static constant_time_size = true}, <No data fields>}
-$21 = {<boost::intrusive::set_impl<boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>, void, unsigned long, true>> = {<boost::intrusive::bstree_impl<boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>, void, unsigned long, true, (boost::intrusive::algo_types)4>> = {<boost::intrusive::bstbase<boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>, void, true, unsigned long, (boost::intrusive::algo_types)4>> = {<boost::intrusive::detail::size_holder<true, unsigned long, void>> = {static constant_time_size = <optimized out>, size_ = 1}, <boost::intrusive::bstbase2<boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>, void, (boost::intrusive::algo_types)4>> = {<boost::intrusive::bstbase3<boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>, (boost::intrusive::algo_types)4>> = {<boost::intrusive::compact_rbtree_node<void*>> = {parent_ = 0x7fffffffd4c0, left_ = 0x7fffffffd4c0, right_ = 0x7fffffffd4c0}, <boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>> = {<boost::intrusive::bhtraits_base<MyClass, boost::intrusive::compact_rbtree_node<void*>*, boost::intrusive::default_tag, 3u>> = {<No data fields>}, static link_mode = <optimized out>}, static external_value_traits = <optimized out>, static safemode_or_autounlink = <optimized out>, static stateful_value_traits = <optimized out>}, <boost::intrusive::detail::ebo_functor_holder<std::less<MyClass> >> = {<boost::intrusive::detail::ebo_functor_holder_impl<std::less<MyClass>, false>> = {<std::less<MyClass>> = {<std::binary_function<MyClass, MyClass, bool>> = {<No data fields>}, <No data fields>}, <No data fields>}, <No data fields>}, <No data fields>}, <No data fields>}, <boost::intrusive::detail::clear_on_destructor_base<boost::intrusive::bstree_impl<boost::intrusive::bhtraits<MyClass, boost::intrusive::rbtree_node_traits<void*, true>, (boost::intrusive::link_mode_type)1, boost::intrusive::default_tag, 3u>, void, unsigned long, true, (boost::intrusive::algo_types)4>, true>> = {<No data fields>}, static external_value_traits = <optimized out>, static constant_time_size = true, static stateful_value_traits = <optimized out>, static safemode_or_autounlink = <optimized out>}, static constant_time_size = true}, <No data fields>}
-$22 = 0x0 -> N/A
-$23 = 0x7fffffffd4c0 -> {<boost::intrusive::set_base_hook<boost::intrusive::optimize_size<true>, void, void, void>> = {parent_ = 0x6165e9 <v_intrusive_set_2+9>, left_ = 0x0, right_ = 0x0}, int_ = 42, member_hook_ = {parent_ = 0x0, left_ = 0x0, right_ = 0x0, color_ = (unknown: 4199744)}}
-$24 = bi::list<MyClass_list>
-$25 = bi::list<MyClass_list> = {[0, 0x7fffffffd490] = {<boost::intrusive::list_base_hook<void, void, void>> = {next_ = 0x616638 <v_intrusive_list_2+8>, prev_ = 0x616638 <v_intrusive_list_2+8>}, int_ = 42, member_hook_ = {next_ = 0x0, prev_ = 0x0}}}
-$26 = 0x0 -> N/A
-$27 = 0x7fffffffd490 -> {<boost::intrusive::list_base_hook<void, void, void>> = {next_ = 0x616638 <v_intrusive_list_2+8>, prev_ = 0x616638 <v_intrusive_list_2+8>}, int_ = 42, member_hook_ = {next_ = 0x0, prev_ = 0x0}}
-$28 = (boost::gregorian::date) uninitialized
-$29 = (boost::gregorian::date) 2014-03-00
-$30 = (boost::posix_time::ptime) uninitialized
-$31 = (boost::posix_time::ptime) 212273067600000000
+$20 = (boost::gregorian::date) uninitialized
+$21 = (boost::gregorian::date) 2014-03-00
+$22 = (boost::posix_time::ptime) uninitialized
+$23 = (boost::posix_time::ptime) 212273499600000000
 A debugging session is active.
 
-	Inferior 1 [process 30875] will be killed.
+	Inferior 1 [process 26652] will be killed.
 
 Quit anyway? (y or n) [answered Y; input not from terminal]

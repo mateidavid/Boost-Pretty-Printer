@@ -1,0 +1,22 @@
+#!/bin/bash
+set -eEu
+trap 'echo "$0: line $LINENO: exit code $?" >&2' ERR
+crash () { echo "error: $@" >&2; exit 1; }
+
+src_file=${1}.cpp
+exec_file=${1}
+gdb_file=${1}.gdb
+[ -r "$src_file" ] && [ -r "$gdb_file" ]
+
+if [ -x "$exec_file" ] && [ "$exec_file" -nt "$src_file" ]; then
+    echo "$exec_file: exists" >&2
+else
+    echo "$exec_file: compiling" >&2
+    g++ -O0 -g3 -fno-inline -std=c++11 -Wall -Wextra -pedantic -o "$exec_file" "$src_file" ||
+    {
+        echo "compilation failed" >&2
+        exit 1
+    }
+fi
+echo "$exec_file: invoking gdb" >&2
+gdb "$exec_file" -x "$gdb_file"

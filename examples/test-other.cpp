@@ -12,8 +12,6 @@
 #include <boost/variant.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/string_generator.hpp>
-#include <boost/intrusive/set.hpp>
-#include <boost/intrusive/list.hpp>
 #include "boost/date_time/gregorian/gregorian.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
 
@@ -49,53 +47,6 @@ boost::uuids::uuid v_uuid_1;
 boost::uuids::string_generator gen;
 boost::uuids::uuid v_uuid_2 = gen("{01234567-89ab-cdef-0123-456789abcdef}");
 
-                  //This is a base hook optimized for size
-class MyClass : public boost::intrusive::set_base_hook<boost::intrusive::optimize_size<true> >
-{
-   int int_;
-
-   public:
-   //This is a member hook
-   boost::intrusive::set_member_hook<> member_hook_;
-
-   MyClass(int i)
-      :  int_(i)
-      {}
-   friend bool operator< (const MyClass &a, const MyClass &b)
-      {  return a.int_ < b.int_;  }
-   friend bool operator> (const MyClass &a, const MyClass &b)
-      {  return a.int_ > b.int_;  }
-   friend bool operator== (const MyClass &a, const MyClass &b)
-      {  return a.int_ == b.int_;  }
-};
-
-//Define a set using the base hook that will store values in reverse order
-typedef boost::intrusive::set< MyClass, boost::intrusive::compare<std::greater<MyClass> > > BaseSet;
-boost::intrusive::set<MyClass> v_intrusive_set_1;
-boost::intrusive::set<MyClass> v_intrusive_set_2;
-
-boost::intrusive::set<MyClass>::iterator v_intrusive_set_iterator_1;
-boost::intrusive::set<MyClass>::iterator v_intrusive_set_iterator_2;
-
-class MyClass_list : public boost::intrusive::list_base_hook<>   //This is a derivation hook
-{
-   int int_;
-
-   public:
-   //This is a member hook
-   boost::intrusive::list_member_hook<> member_hook_;
-
-   MyClass_list(int i)
-      :  int_(i)
-   {}
-};
-
-boost::intrusive::list<MyClass_list> v_intrusive_list_1;
-boost::intrusive::list<MyClass_list> v_intrusive_list_2;
-
-boost::intrusive::list<MyClass_list>::iterator v_intrusive_list_iterator_1;
-boost::intrusive::list<MyClass_list>::iterator v_intrusive_list_iterator_2;
-
 boost::gregorian::date v_gregorian_date_1;
 boost::gregorian::date v_gregorian_date_2(boost::gregorian::day_clock::local_day());
 
@@ -111,18 +62,6 @@ int main(int argc, char* argv[])
 {
     v_circular_buffer_2.push_back(1);
     v_circular_buffer_2.push_back(4);
-
-    MyClass tmp(x);
-    v_intrusive_set_2.insert(tmp);
-    v_intrusive_set_iterator_2 = v_intrusive_set_2.begin();
-    (void)v_intrusive_set_1.begin();
-    (void)v_intrusive_set_1.end();
-
-    MyClass_list tmp_list(x);
-    v_intrusive_list_2.push_front(tmp_list);
-    v_intrusive_list_iterator_2 = v_intrusive_list_2.begin();
-    (void)v_intrusive_list_1.begin();
-    (void)v_intrusive_list_1.end();
 
     int r = done();  // break here
     r += argc + (char)argv[0][0];

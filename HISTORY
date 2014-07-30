@@ -1,3 +1,9 @@
+2014 July 30 - Matei David
+
+  - Restructured printers into separate files.
+  - Added support for boost::intrusive slist/list/set 1.55 containers.
+  - Added option to define trivial printers.
+
 2014 July 17 - Matei David
 
   - Fixed Python 3 issues.

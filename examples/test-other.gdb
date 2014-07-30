@@ -20,14 +20,6 @@ p v_variant_1
 p v_variant_2
 p v_uuid_1
 p v_uuid_2
-p v_intrusive_set_1
-p v_intrusive_set_2
-p v_intrusive_set_iterator_1
-p v_intrusive_set_iterator_2
-p v_intrusive_list_1
-p v_intrusive_list_2
-p v_intrusive_list_iterator_1
-p v_intrusive_list_iterator_2
 p v_gregorian_date_1
 p v_gregorian_date_2
 p v_ptime_1
