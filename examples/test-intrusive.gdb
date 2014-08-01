@@ -17,7 +17,7 @@ p mh2_list_1
 p good_tvt_list_0
 p good_tvt_list_1
 p bad_tvt_list_0
-py boost_print.bypass_static_method["TVT_Bad_List_Node_Traits::get_next"] = lambda n: n['_next_2']
+py boost_print.static_method[('TVT_Bad_List_Node_Traits', 'get_next')] = lambda n: n['_next_2']
 p bad_tvt_list_0
 p bad_tvt_list_1
 p list_it_0
@@ -33,7 +33,7 @@ p mh2_slist_1
 p good_tvt_slist_0
 p good_tvt_slist_1
 p bad_tvt_slist_0
-py boost_print.bypass_static_method["TVT_Bad_SList_Node_Traits::get_next"] = lambda n: n['_next_2']
+py boost_print.static_method[('TVT_Bad_SList_Node_Traits', 'get_next')] = lambda n: n['_next_2']
 p bad_tvt_slist_0
 p bad_tvt_slist_1
 p slist_it_0
@@ -49,9 +49,9 @@ p mh2_set_1
 p good_tvt_set_0
 p good_tvt_set_1
 p bad_tvt_set_0
-py boost_print.bypass_static_method["TVT_Bad_Set_Node_Traits::get_parent"] = lambda n: n['_parent_2']
-py boost_print.bypass_static_method["TVT_Bad_Set_Node_Traits::get_left"] = lambda n: n['_left_2']
-py boost_print.bypass_static_method["TVT_Bad_Set_Node_Traits::get_right"] = lambda n: n['_right_2']
+py boost_print.static_method[('TVT_Bad_Set_Node_Traits', 'get_parent')] = lambda n: n['_parent_2']
+py boost_print.static_method[('TVT_Bad_Set_Node_Traits', 'get_left')] = lambda n: n['_left_2']
+py boost_print.static_method[('TVT_Bad_Set_Node_Traits', 'get_right')] = lambda n: n['_right_2']
 p bad_tvt_set_0
 p bad_tvt_set_1
 p set_it_0

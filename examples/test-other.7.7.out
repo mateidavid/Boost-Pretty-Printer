@@ -1,4 +1,4 @@
-test-other: compiling
+test-other: exists
 test-other: invoking gdb
 GNU gdb (Ubuntu 7.7-0ubuntu3.1) 7.7
 Copyright (C) 2014 Free Software Foundation, Inc.
@@ -41,9 +41,9 @@ $19 = (boost::uuids::uuid) 01234567-89ab-cdef-0123-456789abcdef
 $20 = (boost::gregorian::date) uninitialized
 $21 = (boost::gregorian::date) 2014-03-00
 $22 = (boost::posix_time::ptime) uninitialized
-$23 = (boost::posix_time::ptime) 212273499600000000
+$23 = (boost::posix_time::ptime) 212273672400000000
 A debugging session is active.
 
-	Inferior 1 [process 26652] will be killed.
+	Inferior 1 [process 15177] will be killed.
 
 Quit anyway? (y or n) [answered Y; input not from terminal]

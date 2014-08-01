@@ -1,4 +1,4 @@
-test-intrusive: compiling
+test-intrusive: exists
 test-intrusive: invoking gdb
 GNU gdb (Ubuntu 7.7-0ubuntu3.1) 7.7
 Copyright (C) 2014 Free Software Foundation, Inc.
@@ -49,67 +49,67 @@ Breakpoint 1 at 0x400b01: file test-intrusive.cpp, line 270.
 Breakpoint 1, done () at test-intrusive.cpp:270
 270	void done() {}
 $1 = bi::list<List_Obj>
-$2 = bi::list<List_Obj> = {[0; 0x625078] = 1, [1; 0x625010] = 0}
+$2 = bi::list<List_Obj> = {[0] (0x625078) = 1, [1] (0x625010) = 0}
 $3 = bi::list<List_Obj>
-$4 = bi::list<List_Obj> = {[0; 0x6250e0] = 2, [1; 0x625010] = 0}
+$4 = bi::list<List_Obj> = {[0] (0x6250e0) = 2, [1] (0x625010) = 0}
 $5 = bi::list<List_Obj>
-$6 = bi::list<List_Obj> = {[0; 0x625148] = 3, [1; 0x625010] = 0}
+$6 = bi::list<List_Obj> = {[0] (0x625148) = 3, [1] (0x625010) = 0}
 $7 = bi::list<List_Obj>
-$8 = bi::list<List_Obj> = {[0; 0x6251b0] = 4, [1; 0x625010] = 0}
+$8 = bi::list<List_Obj> = {[0] (0x6251b0) = 4, [1] (0x625010) = 0}
 $9 = bi::list<List_Obj>
-$10 = bi::list<List_Obj> = {[0; 0x625218] = 5, [1; 0x625010] = 0}
+$10 = bi::list<List_Obj> = {[0] (0x625218) = 5, [1] (0x625010) = 0}
 $11 = bi::list<List_Obj>call_static_method:
 	call failed: TVT_Bad_List_Node_Traits::get_next($_arg_0)
 	to bypass call with a python function <f>, use:
-	  py boost_print.bypass_static_method["TVT_Bad_List_Node_Traits::get_next"] = <f>
+	  py boost_print.static_method[("TVT_Bad_List_Node_Traits", "get_next")] = <f>
 Python Exception <class 'gdb.error'> : 
 
 $12 = bi::list<List_Obj>
-$13 = bi::list<List_Obj> = {[0; 0x625280] = 6, [1; 0x625010] = 0}
+$13 = bi::list<List_Obj> = {[0] (0x625280) = 6, [1] (0x625010) = 0}
 $14 = 0x0 -> N/A
 $15 = 0x625078 -> 1
 $16 = bi::slist<SList_Obj>
-$17 = bi::slist<SList_Obj> = {[0; 0x625468] = 1, [1; 0x625430] = 0}
+$17 = bi::slist<SList_Obj> = {[0] (0x625468) = 1, [1] (0x625430) = 0}
 $18 = bi::slist<SList_Obj>
-$19 = bi::slist<SList_Obj> = {[0; 0x6254a0] = 2, [1; 0x625430] = 0}
+$19 = bi::slist<SList_Obj> = {[0] (0x6254a0) = 2, [1] (0x625430) = 0}
 $20 = bi::slist<SList_Obj>
-$21 = bi::slist<SList_Obj> = {[0; 0x6254d8] = 3, [1; 0x625430] = 0}
+$21 = bi::slist<SList_Obj> = {[0] (0x6254d8) = 3, [1] (0x625430) = 0}
 $22 = bi::slist<SList_Obj>
-$23 = bi::slist<SList_Obj> = {[0; 0x625510] = 4, [1; 0x625430] = 0}
+$23 = bi::slist<SList_Obj> = {[0] (0x625510) = 4, [1] (0x625430) = 0}
 $24 = bi::slist<SList_Obj>
-$25 = bi::slist<SList_Obj> = {[0; 0x625548] = 5, [1; 0x625430] = 0}
+$25 = bi::slist<SList_Obj> = {[0] (0x625548) = 5, [1] (0x625430) = 0}
 $26 = bi::slist<SList_Obj>call_static_method:
 	call failed: TVT_Bad_SList_Node_Traits::get_next($_arg_0)
 	to bypass call with a python function <f>, use:
-	  py boost_print.bypass_static_method["TVT_Bad_SList_Node_Traits::get_next"] = <f>
+	  py boost_print.static_method[("TVT_Bad_SList_Node_Traits", "get_next")] = <f>
 Python Exception <class 'gdb.error'> : 
 
 $27 = bi::slist<SList_Obj>
-$28 = bi::slist<SList_Obj> = {[0; 0x625580] = 6, [1; 0x625430] = 0}
+$28 = bi::slist<SList_Obj> = {[0] (0x625580) = 6, [1] (0x625430) = 0}
 $29 = 0x0 -> N/A
 $30 = 0x625468 -> 1
 $31 = bi::set<Set_Obj>
-$32 = bi::set<Set_Obj> = {[0; 0x625670] = 0, [1; 0x625738] = 1, [2; 0x6258c8] = 3, [3; 0x625a58] = 5, [4; 0x625be8] = 7, [5; 0x625d78] = 9}
+$32 = bi::set<Set_Obj> = {[0] (0x625670) = 0, [1] (0x625738) = 1, [2] (0x6258c8) = 3, [3] (0x625a58) = 5, [4] (0x625be8) = 7, [5] (0x625d78) = 9}
 $33 = bi::set<Set_Obj>
-$34 = bi::set<Set_Obj> = {[0; 0x625670] = 0, [1; 0x625800] = 2, [2; 0x625990] = 4, [3; 0x625b20] = 6, [4; 0x625cb0] = 8}
+$34 = bi::set<Set_Obj> = {[0] (0x625670) = 0, [1] (0x625800) = 2, [2] (0x625990) = 4, [3] (0x625b20) = 6, [4] (0x625cb0) = 8}
 $35 = bi::set<Set_Obj>
-$36 = bi::set<Set_Obj> = {[0; 0x625670] = 0, [1; 0x6258c8] = 3}
+$36 = bi::set<Set_Obj> = {[0] (0x625670) = 0, [1] (0x6258c8) = 3}
 $37 = bi::set<Set_Obj>
-$38 = bi::set<Set_Obj> = {[0; 0x625670] = 0, [1; 0x625990] = 4}
+$38 = bi::set<Set_Obj> = {[0] (0x625670) = 0, [1] (0x625990) = 4}
 $39 = bi::set<Set_Obj>
-$40 = bi::set<Set_Obj> = {[0; 0x625670] = 0, [1; 0x625a58] = 5}
+$40 = bi::set<Set_Obj> = {[0] (0x625670) = 0, [1] (0x625a58) = 5}
 $41 = bi::set<Set_Obj>call_static_method:
 	call failed: TVT_Bad_Set_Node_Traits::get_left($_arg_0)
 	to bypass call with a python function <f>, use:
-	  py boost_print.bypass_static_method["TVT_Bad_Set_Node_Traits::get_left"] = <f>
+	  py boost_print.static_method[("TVT_Bad_Set_Node_Traits", "get_left")] = <f>
 Python Exception <class 'gdb.error'> : 
 
 $42 = bi::set<Set_Obj>
-$43 = bi::set<Set_Obj> = {[0; 0x625670] = 0, [1; 0x625b20] = 6}
+$43 = bi::set<Set_Obj> = {[0] (0x625670) = 0, [1] (0x625b20) = 6}
 $44 = 0x0 -> N/A
 $45 = 0x625670 -> 0
 A debugging session is active.
 
-	Inferior 1 [process 26674] will be killed.
+	Inferior 1 [process 15164] will be killed.
 
 Quit anyway? (y or n) [answered Y; input not from terminal]

@@ -1,3 +1,9 @@
+2014 Aug 1 - Matei David
+
+  - Intrusive container printers now use raw pointers
+  - Updated mechanisms to bypass: inner type lookup, static method calls, raw pointer transformations, null pointer detection
+  - New conveneince functions to allocate and deallocate inferior variables: $new, $del.
+
 2014 July 30 - Matei David
 
   - Restructured printers into separate files.

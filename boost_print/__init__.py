@@ -38,7 +38,8 @@ import os
 import glob
 import importlib
 
-from .common import register_printers, add_trivial_printer, bypass_static_method, bypass_inner_type
+from .common import register_printers, add_trivial_printer
+from .utils import *
 
 _files = [os.path.basename(_m) for _m in glob.glob(os.path.dirname(__file__) + "/*.py")]
 _modules = [_f[:-3] for _f in _files if not _f.startswith('__init__')]

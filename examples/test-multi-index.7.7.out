@@ -1,4 +1,4 @@
-test-multi-index: compiling
+test-multi-index: exists
 test-multi-index: invoking gdb
 GNU gdb (Ubuntu 7.7-0ubuntu3.1) 7.7
 Copyright (C) 2014 Free Software Foundation, Inc.
@@ -26,6 +26,6 @@ $4 = boost::multi_index_container<int, indexed_by<sequenced<>, ordered_unique<id
 $5 = boost::multi_index_container<int, indexed_by<sequenced<>, ordered_unique<identity<int>>, random_access<>, ordered_non_unique<global_fun<int, int, negative>>, hashed_non_unique<identity<int>>>>[idx=4] = {boost::multi_index::hashed_non_unique = printer not implemented}
 A debugging session is active.
 
-	Inferior 1 [process 26634] will be killed.
+	Inferior 1 [process 15190] will be killed.
 
 Quit anyway? (y or n) [answered Y; input not from terminal]

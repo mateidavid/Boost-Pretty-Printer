@@ -7,28 +7,6 @@ import gdb.printing
 # check "ptype/mtr" is supported
 gdb.execute('ptype/mtr void', True, True)
 
-# Bypass static method calls
-#
-# key: str
-#   If method is static inside a class, the type name should be stripped of typedefs.
-#
-# value: python function
-#   Call this function instead of calling original static method.
-#
-bypass_static_method = dict()
-
-# Bypass inner type deduction
-#
-# key: (str, str)
-#   1st argument is outter type, stripped of typedefs.
-#   2nd argument is inner typedef name to look for.
-#
-# value: str
-#   Type to lookup instead of accessing the inner type.
-#
-bypass_inner_type = dict()
-
-
 class GDB_Value_Wrapper(gdb.Value):
     "Wrapper class for gdb.Value that allows setting custom attributes."
     pass

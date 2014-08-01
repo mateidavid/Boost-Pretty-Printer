@@ -8,7 +8,8 @@ import gdb
 import gdb.types
 
 from .common import *
-from . import utils
+from .utils import *
+from .utils import _add_to_dict
 
 def short_ns(tag):
     if tag.startswith('boost::intrusive::'):
@@ -35,7 +36,8 @@ class Generic_Hook_Type_Recognizer:
         if str(node_t.strip_typedefs()).startswith('boost::intrusive::node_holder'):
             node_t = node_t.fields()[0].type
         node_tag = str(node_t.strip_typedefs())
-        return 'bi::generic_hook<' + short_ns(node_tag) + ', ' + short_ns(hook_tag) + ', ' + link_mode + '>'
+        return ('bi::generic_hook<' + short_ns(node_tag) + ', '
+                + short_ns(hook_tag) + ', ' + link_mode + '>')
 
 @add_value_printer
 class Generic_Hook_Printer:
@@ -87,169 +89,134 @@ class Hook_Printer:
         generic_hook = self.val.cast(generic_hook_t)
         return str(generic_hook)
 
-def get_node_traits(vtt):
-    """Get node_traits type from value_traits type."""
-    assert isinstance(vtt, gdb.Type), 'vtt not a gdb.Type'
+# resolve bhtraits::node_traits
+#   node_traits is the 2nd template argument
+#
+@_add_to_dict(inner_type, ('boost::intrusive::bhtraits', 'node_traits'))
+def f(vtt):
+    return vtt.template_argument(1)
 
-    # builtin bhtraits:
-    #   node_traits is 2nd template parameter
-    #
-    if str(vtt.strip_typedefs()).startswith('boost::intrusive::bhtraits<'):
-        #print('get_node_traits: internal vtt: bhtraits', file=sys.stderr)
-        return vtt.template_argument(1)
+# resolve mhtraits::node_traits
+#   hook is 2nd template parameter (e.g. "list_member_hook")
+#   generic_hook is 1st subclass of hook
+#   get_node_algo is 1st template parameter of generic_hook
+#
+#   We hard-code node_traits as a function of get_node_algo.
+#
+@_add_to_dict(inner_type, ('boost::intrusive::mhtraits', 'node_traits'))
+def f(vtt):
+    gen_hook_t = vtt.template_argument(1).fields()[0].type
+    get_node_algo_t = gen_hook_t.template_argument(0)
+    voidptr_t = get_node_algo_t.template_argument(0)
+    for case in switch(template_name(get_node_algo_t)):
+        if case('boost::intrusive::get_list_node_algo'):
+            return gdb.lookup_type('boost::intrusive::list_node_traits<'
+                                   + str(voidptr_t) + '>')
+        if case('boost::intrusive::get_slist_node_algo'):
+            return gdb.lookup_type('boost::intrusive::slist_node_traits<'
+                                   + str(voidptr_t) + '>')
+        if case('boost::intrusive::get_set_node_algo'):
+            opt_size = get_node_algo_t.template_argument(1)
+            return gdb.lookup_type('boost::intrusive::rbtree_node_traits<'
+                                   + str(voidptr_t) + ',' + str(opt_size) + '>')
+        if case('boost::intrusive::get_avl_set_node_algo'):
+            opt_size = get_node_algo_t.template_argument(1)
+            return gdb.lookup_type('boost::intrusive::avltree_node_traits<'
+                                   + str(voidptr_t) + ',' + str(opt_size) + '>')
+        if case('boost::intrusive::get_bs_set_node_algo'):
+            return gdb.lookup_type('boost::intrusive::tree_node_traits<'
+                                   + str(voidptr_t) + '>')
+    assert False, 'could not determine node_traits'
 
-    # builtin mhtraits:
-    #   hook is 2nd template parameter (e.g. "list_member_hook")
-    #   generic_hook is 1st subclass of hook
-    #   get_node_algo is 1st template parameter of generic_hook
-    #
-    #   We hard-code node_traits as a function of get_node_algo.
-    #
-    if str(vtt.strip_typedefs()).startswith('boost::intrusive::mhtraits<'):
-        #print('get_node_traits: internal vtt: mhtraits', file=sys.stderr)
-        gen_hook_t = vtt.template_argument(1).fields()[0].type
-        get_node_algo_t = gen_hook_t.template_argument(0)
-        voidptr_t = get_node_algo_t.template_argument(0)
-        for case in utils.switch(utils.template_name(get_node_algo_t)):
-            if case('boost::intrusive::get_list_node_algo'):
-                return gdb.lookup_type('boost::intrusive::list_node_traits<'
-                                       + str(voidptr_t) + '>')
-            if case('boost::intrusive::get_slist_node_algo'):
-                return gdb.lookup_type('boost::intrusive::slist_node_traits<'
-                                       + str(voidptr_t) + '>')
-            if case('boost::intrusive::get_set_node_algo'):
-                opt_size = get_node_algo_t.template_argument(1)
-                return gdb.lookup_type('boost::intrusive::rbtree_node_traits<'
-                                       + str(voidptr_t) + ',' + str(opt_size) + '>')
-            if case('boost::intrusive::get_avl_set_node_algo'):
-                opt_size = get_node_algo_t.template_argument(1)
-                return gdb.lookup_type('boost::intrusive::avltree_node_traits<'
-                                       + str(voidptr_t) + ',' + str(opt_size) + '>')
-            if case('boost::intrusive::get_bs_set_node_algo'):
-                return gdb.lookup_type('boost::intrusive::tree_node_traits<'
-                                       + str(voidptr_t) + '>')
-        assert False, 'could not determine node_traits'
+# resolve trivial_value_traits::node_traits
+#   node_traits is the 1st template argument
+#
+@_add_to_dict(inner_type, ('boost::intrusive::trivial_value_traits', 'node_traits'))
+def f(vtt):
+    return vtt.template_argument(0)
 
-    # builtin trivial_value_traits:
-    #   node_traits is first template parameter
-    #
-    if str(vtt.strip_typedefs()).startswith('boost::intrusive::trivial_value_traits<'):
-        #print('get_node_traits: internal vtt: trivial_value_traits', file=sys.stderr)
-        return vtt.template_argument(0)
+# resolve trivial_value_traits::to_value_ptr
+#   node == value
+#
+@_add_to_dict(static_method, ('boost::intrusive::trivial_value_traits', 'to_value_ptr'))
+def f(vtt, node_rptr):
+    return node_rptr
 
-    # if vtt is not a built-in type, try to resolve typedef
-    return utils.get_inner_type(vtt, 'node_traits')
+# resolve bhtraits::to_value_ptr
+#   perform a 2-step upcast to accomodate for multiple base hooks
+#
+@_add_to_dict(static_method, ('boost::intrusive::bhtraits', 'to_value_ptr'))
+def f(vtt, node_rptr):
+    # first, find the tag type
+    tag_t = vtt.template_argument(3)
+    # find a 'generic_hook' 1st base class of a base class of value type
+    # with the appropriate tag
+    value_t = vtt.template_argument(0)
+    subclass_t = None
+    for f in value_t.fields():
+        if f.type.code != gdb.TYPE_CODE_STRUCT:
+            # the remaining types aren't subclasses
+            break
+        t1 = f.type
+        t2 = t1.fields()[0].type
+        if (template_name(t2) == 'boost::intrusive::generic_hook'
+            and t2.template_argument(1).strip_typedefs() == tag_t.strip_typedefs()):
+            subclass_t = t2
+            break
+    assert subclass_t, 'no subclass hook with tag: ' + str(tag_t.strip_typedefs())
+    # first upcast into generic_hook ptr with correct tag
+    subclass_rptr = node_rptr.cast(subclass_t.pointer())
+    val_rptr_t = value_t.pointer()
+    # second upcast into value
+    return subclass_rptr.cast(val_rptr_t)
 
+# resolve mhtraits::to_value_ptr
+#   offset is 3rd template argument
+#
+@_add_to_dict(static_method, ('boost::intrusive::mhtraits', 'to_value_ptr'))
+def f(vtt, node_rptr):
+    offset = vtt.template_argument(2)
+    offset_int = gdb.parse_and_eval('(size_t)(' + str(offset) + ')')
+    node_rptr_int = int(node_rptr)
+    value_t = vtt.template_argument(0)
+    val_rptr_t = value_t.pointer()
+    return gdb.parse_and_eval('(' + str(val_rptr_t.strip_typedefs()) +
+                              ')(' + str(node_rptr_int - offset_int) + ')')
 
-def apply_to_value_ptr(vtt, node_ptr):
-    """Get value_ptr from node_ptr. `vtt` is a gdb.Type, `node_ptr` is a gdb.Value."""
-    assert isinstance(vtt, gdb.Type), 'vtt not a gdb.Type'
-    assert isinstance(node_ptr, gdb.Value), 'node_ptr not a gdb.Value'
+# resolve (s)list_node_traits::get_next
+#
+@_add_to_dict(static_method,
+              ('boost::intrusive::list_node_traits', 'get_next'),
+              ('boost::intrusive::slist_node_traits', 'get_next'))
+def f(ntt, node_rptr):
+    return node_rptr['next_']
 
-    # builtin trivial_value_traits:
-    #   node == value
-    #
-    if str(vtt.strip_typedefs()).startswith('boost::intrusive::trivial_value_traits<'):
-        return node_ptr
+# resolve (rb|avl)tree_node_traits::get_parent
+#
+@_add_to_dict(static_method,
+              ('boost::intrusive::rbtree_node_traits', 'get_parent'),
+              ('boost::intrusive::avltree_node_traits', 'get_parent'),
+              ('boost::intrusive::tree_node_traits', 'get_parent'))
+def f(ntt, node_rptr):
+    return node_rptr['parent_']
 
-    # builtin bhtraits
-    #   we perform a 2-step upcast to accomodate for multiple base hooks
-    #
-    if str(vtt.strip_typedefs()).startswith('boost::intrusive::bhtraits<'):
-        # first, find the tag type
-        tag_t = vtt.template_argument(3)
-        # find value base class with the appropriate tag
-        subclass_t = None
-        for f in vtt.template_argument(0).fields():
-            if f.type.code != gdb.TYPE_CODE_STRUCT:
-                # the remaining types aren't subclasses
-                break
-            t = f.type.fields()[0].type
-            if (str(t.strip_typedefs()).startswith('boost::intrusive::generic_hook<')
-                and t.template_argument(1).strip_typedefs() == tag_t.strip_typedefs()):
-                subclass_t = t
-                break
-        assert subclass_t, 'no subclass hook with tag: ' + str(tag_t.strip_typedefs())
-        # first upcast into generic_hook ptr with correct tag
-        subclass_ptr = node_ptr.cast(subclass_t.pointer())
-        val_ptr_t = utils.get_inner_type(vtt, 'pointer')
-        # second upcast into value
-        return subclass_ptr.cast(val_ptr_t)
+# resolve (rb|avl)tree_node_traits::get_left
+#
+@_add_to_dict(static_method,
+              ('boost::intrusive::rbtree_node_traits', 'get_left'),
+              ('boost::intrusive::avltree_node_traits', 'get_left'),
+              ('boost::intrusive::tree_node_traits', 'get_left'))
+def f(ntt, node_rptr):
+    return node_rptr['left_']
 
-    # internal mhtraits
-    #   offset is 3rd template argument
-    #
-    if str(vtt.strip_typedefs()).startswith('boost::intrusive::mhtraits<'):
-        offset = vtt.template_argument(2)
-        offset_int = gdb.parse_and_eval('(size_t)(' + str(offset) + ')')
-        node_ptr_int = int(node_ptr)
-        val_ptr_t = utils.get_inner_type(vtt, 'pointer')
-        return gdb.parse_and_eval('(' + str(val_ptr_t.strip_typedefs()) + ')(' + str(node_ptr_int - offset_int) + ')')
-
-    return utils.call_static_method(str(vtt.strip_typedefs()) + '::to_value_ptr', node_ptr)
-
-
-def apply_get_next(ntt, node_ptr):
-    """Apply node_traits::get_next(). `ntt` is a gdb.Type, `node_ptr` is a gdb.Value."""
-    assert isinstance(ntt, gdb.Type), 'ntt not a gdb.Type'
-    assert isinstance(node_ptr, gdb.Value), 'node_ptr not a gdb.Value'
-
-    # builtin (s)list_node_traits
-    #   follow 'next_'
-    #
-    if (str(ntt.strip_typedefs()).startswith('boost::intrusive::list_node_traits<')
-        or str(ntt.strip_typedefs()).startswith('boost::intrusive::slist_node_traits<')):
-        return node_ptr['next_']
-
-    return utils.call_static_method(str(ntt.strip_typedefs()) + '::get_next', node_ptr)
-
-def apply_get_parent(ntt, node_ptr):
-    """Apply node_traits::get_parent(). `ntt` is a gdb.Type, `node_ptr` is a gdb.Value."""
-    assert isinstance(ntt, gdb.Type), 'ntt not a gdb.Type'
-    assert isinstance(node_ptr, gdb.Value), 'node_ptr not a gdb.Value'
-
-    # builtin tree_node_traits
-    #   follow 'parent_'
-    #
-    if (utils.template_name(ntt) in
-        ['boost::intrusive::rbtree_node_traits',
-         'boost::intrusive::avltree_node_traits',
-         'boost::intrusive::tree_node_traits']):
-        return node_ptr['parent_']
-
-    return utils.call_static_method(str(ntt.strip_typedefs()) + '::get_parent', node_ptr)
-
-def apply_get_left(ntt, node_ptr):
-    """Apply node_traits::get_left(). `ntt` is a gdb.Type, `node_ptr` is a gdb.Value."""
-    assert isinstance(ntt, gdb.Type), 'ntt not a gdb.Type'
-    assert isinstance(node_ptr, gdb.Value), 'node_ptr not a gdb.Value'
-
-    # builtin tree_node_traits
-    #   follow 'left_'
-    #
-    if (utils.template_name(ntt) in
-        ['boost::intrusive::rbtree_node_traits',
-         'boost::intrusive::avltree_node_traits',
-         'boost::intrusive::tree_node_traits']):
-        return node_ptr['left_']
-
-    return utils.call_static_method(str(ntt.strip_typedefs()) + '::get_left', node_ptr)
-
-def apply_get_right(ntt, node_ptr):
-    """Apply node_traits::get_right(). `ntt` is a gdb.Type, `node_ptr` is a gdb.Value."""
-    assert isinstance(ntt, gdb.Type), 'ntt not a gdb.Type'
-    assert isinstance(node_ptr, gdb.Value), 'node_ptr not a gdb.Value'
-
-    # builtin tree_node_traits
-    #   follow 'right_'
-    #
-    if (utils.template_name(ntt) in
-        ['boost::intrusive::rbtree_node_traits',
-         'boost::intrusive::avltree_node_traits',
-         'boost::intrusive::tree_node_traits']):
-        return node_ptr['right_']
-
-    return utils.call_static_method(str(ntt.strip_typedefs()) + '::get_right', node_ptr)
+# resolve (rb|avl)tree_node_traits::get_right
+#
+@_add_to_dict(static_method,
+              ('boost::intrusive::rbtree_node_traits', 'get_right'),
+              ('boost::intrusive::avltree_node_traits', 'get_right'),
+              ('boost::intrusive::tree_node_traits', 'get_right'))
+def f(ntt, node_rptr):
+    return node_rptr['right_']
 
 def apply_pointed_node(it):
     """Apply iterator::pointed_node."""
@@ -257,20 +224,19 @@ def apply_pointed_node(it):
 
     # builtin iterators
     #
-    if (utils.template_name(it.type) == 'boost::intrusive::list_iterator'
-        or utils.template_name(it.type) == 'boost::intrusive::slist_iterator'
-        or utils.template_name(it.type) == 'boost::intrusive::tree_iterator'):
+    if (template_name(it.type) == 'boost::intrusive::list_iterator'
+        or template_name(it.type) == 'boost::intrusive::slist_iterator'
+        or template_name(it.type) == 'boost::intrusive::tree_iterator'):
         return it['members_']['nodeptr_']
 
-    return utils.call_object_method(it, 'pointed_node')
+    return call_object_method(it, 'pointed_node')
 
-
-def value_ptr_from_iiterator(it):
+def value_rptr_from_iiterator(it):
     # value traits is first template argument
     value_traits_t = it.type.template_argument(0)
     # apply pointed_node() to get node_ptr
-    node_ptr = apply_pointed_node(it)
-    return apply_to_value_ptr(value_traits_t, node_ptr)
+    node_rptr = get_raw_ptr(apply_pointed_node(it))
+    return get_raw_ptr(call_static_method(value_traits_t, 'to_value_ptr', node_rptr))
 
 @add_value_printer
 class Iterator_Printer:
@@ -284,9 +250,9 @@ class Iterator_Printer:
         self.val = value
 
     def to_string(self):
-        value_ptr = value_ptr_from_iiterator(self.val)
+        value_rptr = value_rptr_from_iiterator(self.val)
         try:
-            value_str = str(value_ptr.dereference())
+            value_str = str(value_rptr.dereference())
         except:
             value_str = 'N/A'
         return str(self.val['members_']['nodeptr_']) + ' -> ' + value_str
@@ -302,25 +268,28 @@ class List_Printer:
     class Iterator:
         def __init__(self, l):
             self.value_traits_t = l.type.fields()[0].type.template_argument(0)
-            self.node_traits_t = get_node_traits(self.value_traits_t)
-            self.root_node_ptr = utils.call_object_method(l, 'get_root_node')
+            self.node_traits_t = get_inner_type(self.value_traits_t, 'node_traits')
+            self.root_node_rptr = get_raw_ptr(call_object_method(l, 'get_root_node'))
 
         def __iter__(self):
             self.count = 0
-            self.crt_node_ptr = apply_get_next(self.node_traits_t, self.root_node_ptr)
+            self.crt_node_rptr = get_raw_ptr(call_static_method(
+                self.node_traits_t, 'get_next', self.root_node_rptr))
             return self
 
         def __next__(self):
-            if self.crt_node_ptr == self.root_node_ptr:
+            if self.crt_node_rptr == self.root_node_rptr:
                 raise StopIteration
-            val_ptr = apply_to_value_ptr(self.value_traits_t, self.crt_node_ptr)
+            val_rptr = get_raw_ptr(call_static_method(
+                self.value_traits_t, 'to_value_ptr', self.crt_node_rptr))
             try:
-                val_str = str(val_ptr.referenced_value())
+                val_str = str(val_rptr.referenced_value())
             except:
                 val_str = 'N/A'
-            result = ('[%d; %s]' % (self.count, hex(int(val_ptr))), val_str)
+            result = ('[%d] (%s)' % (self.count, hex(int(val_rptr))), val_str)
             self.count = self.count + 1
-            self.crt_node_ptr = apply_get_next(self.node_traits_t, self.crt_node_ptr)
+            self.crt_node_rptr = get_raw_ptr(call_static_method(
+                self.node_traits_t, 'get_next', self.crt_node_rptr))
             return result
 
     def __init__(self, l):
@@ -328,7 +297,7 @@ class List_Printer:
         self.value_type = self.l.type.template_argument(0)
 
     def to_string (self):
-        return (short_ns(utils.template_name(self.l.type))
+        return (short_ns(template_name(self.l.type))
                 + '<' + str(self.value_type.strip_typedefs()) + '>')
 
     def children (self):
@@ -345,7 +314,8 @@ class Tree_Printer:
     def supports(v):
         t = v.type
         d = 5
-        while d > 0 and isinstance(t, gdb.Type) and utils.template_name(t) != 'boost::intrusive::bstree_impl':
+        while (d > 0 and isinstance(t, gdb.Type)
+               and template_name(t) != 'boost::intrusive::bstree_impl'):
             try:
                 t = t.fields()[0].type
             except:
@@ -356,45 +326,51 @@ class Tree_Printer:
     class Iterator:
         def __init__(self, l):
             self.value_traits_t = l.type.fields()[0].type.template_argument(0)
-            self.node_traits_t = get_node_traits(self.value_traits_t)
-            self.header_node_ptr = utils.call_object_method(l, 'header_ptr')
+            self.node_traits_t = get_inner_type(self.value_traits_t, 'node_traits')
+            self.header_node_rptr = get_raw_ptr(call_object_method(l, 'header_ptr'))
 
         def __iter__(self):
             self.count = 0
-            self.crt_node_ptr = apply_get_left(self.node_traits_t, self.header_node_ptr)
+            self.crt_node_rptr = get_raw_ptr(call_static_method(
+                self.node_traits_t, 'get_left', self.header_node_rptr))
             return self
 
         def __next__(self):
-            if self.crt_node_ptr == self.header_node_ptr:
+            if self.crt_node_rptr == self.header_node_rptr:
                 raise StopIteration
-            val_ptr = apply_to_value_ptr(self.value_traits_t, self.crt_node_ptr)
+            val_rptr = get_raw_ptr(call_static_method(
+                self.value_traits_t, 'to_value_ptr', self.crt_node_rptr))
             try:
-                val_str = str(val_ptr.referenced_value())
+                val_str = str(val_rptr.referenced_value())
             except:
                 val_str = 'N/A'
-            result = ('[%d; %s]' % (self.count, hex(int(val_ptr))), val_str)
+            result = ('[%d] (%s)' % (self.count, hex(int(val_rptr))), val_str)
             self.count = self.count + 1
             self.advance()
             return result
 
         def advance(self):
-            n = apply_get_right(self.node_traits_t, self.crt_node_ptr)
-            if n != 0:
+            n = get_raw_ptr(call_static_method(
+                self.node_traits_t, 'get_right', self.crt_node_rptr))
+            if not is_null(n):
                 # if right subtree is not empty, find leftmost node in it
-                self.crt_node_ptr = n
+                self.crt_node_rptr = n
                 while True:
-                    n = apply_get_left(self.node_traits_t, self.crt_node_ptr)
-                    if n == 0:
+                    n = get_raw_ptr(call_static_method(
+                        self.node_traits_t, 'get_left', self.crt_node_rptr))
+                    if is_null(n):
                         break
-                    self.crt_node_ptr = n
+                    self.crt_node_rptr = n
             else:
                 # if right subtree is empty, find first ancestor in whose left subtree we are
                 while True:
-                    old_n = self.crt_node_ptr
-                    self.crt_node_ptr = apply_get_parent(self.node_traits_t, self.crt_node_ptr)
-                    if self.crt_node_ptr == self.header_node_ptr:
+                    old_n = self.crt_node_rptr
+                    self.crt_node_rptr = get_raw_ptr(call_static_method(
+                        self.node_traits_t, 'get_parent', self.crt_node_rptr))
+                    if self.crt_node_rptr == self.header_node_rptr:
                         break
-                    n = apply_get_left(self.node_traits_t, self.crt_node_ptr)
+                    n = get_raw_ptr(call_static_method(
+                        self.node_traits_t, 'get_left', self.crt_node_rptr))
                     if n == old_n:
                         break
 
@@ -403,7 +379,7 @@ class Tree_Printer:
         self.value_type = self.l.type.template_argument(0)
 
     def to_string (self):
-        return (short_ns(utils.template_name(self.l.type))
+        return (short_ns(template_name(self.l.type))
                 + '<' + str(self.value_type.strip_typedefs()) + '>')
 
     def children (self):
