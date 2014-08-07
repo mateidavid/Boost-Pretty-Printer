@@ -176,12 +176,12 @@ def f(vtt, node_rptr):
 @_add_to_dict(static_method, ('boost::intrusive::mhtraits', 'to_value_ptr'))
 def f(vtt, node_rptr):
     offset = vtt.template_argument(2)
-    offset_int = gdb.parse_and_eval('(size_t)(' + str(offset) + ')')
+    offset_int = parse_and_eval('(size_t)(' + str(offset) + ')')
     node_rptr_int = int(node_rptr)
     value_t = vtt.template_argument(0)
     val_rptr_t = value_t.pointer()
-    return gdb.parse_and_eval('(' + str(val_rptr_t.strip_typedefs()) +
-                              ')(' + str(node_rptr_int - offset_int) + ')')
+    return parse_and_eval('(' + str(val_rptr_t.strip_typedefs()) +
+                          ')(' + str(node_rptr_int - offset_int) + ')')
 
 # resolve (s)list_node_traits::get_next
 #
@@ -286,7 +286,7 @@ class List_Printer:
                 val_str = str(val_rptr.referenced_value())
             except:
                 val_str = 'N/A'
-            result = ('[%d] (%s)' % (self.count, hex(int(val_rptr))), val_str)
+            result = ('[%d @%s]' % (self.count, hex(int(val_rptr))), val_str)
             self.count = self.count + 1
             self.crt_node_rptr = get_raw_ptr(call_static_method(
                 self.node_traits_t, 'get_next', self.crt_node_rptr))
@@ -297,11 +297,32 @@ class List_Printer:
         self.value_type = self.l.type.template_argument(0)
 
     def to_string (self):
-        return (short_ns(template_name(self.l.type))
-                + '<' + str(self.value_type.strip_typedefs()) + '>')
+        res = ''
+        if self.l.qualifiers:
+            res += '(' + self.l.qualifiers + ')'
+        res += (short_ns(template_name(self.l.type)) +
+                '<' + str(self.value_type.strip_typedefs()) + '>')
+        return res
 
     def children (self):
         return self.Iterator(self.l)
+
+#@add_type_recognizer
+class List_Type_Recognizer:
+    "Type Recognizer for boost::intrusive::list"
+    name = 'boost::intrusive::list-1.55'
+    enabled = True
+
+    def recognize(self, t):
+        qualifiers = get_type_qualifiers(t)
+        basic_t = gdb.types.get_basic_type(t)
+        if not str(basic_t).startswith('boost::intrusive::list<'):
+            return None
+        res = '%'
+        if qualifiers:
+            res += '(' + qualifiers + ')'
+        res += 'bi::list<' + str(basic_t.template_argument(0)) + '>'
+        return res
 
 @add_value_printer
 class Tree_Printer:
@@ -344,7 +365,7 @@ class Tree_Printer:
                 val_str = str(val_rptr.referenced_value())
             except:
                 val_str = 'N/A'
-            result = ('[%d] (%s)' % (self.count, hex(int(val_rptr))), val_str)
+            result = ('[%d @%s]' % (self.count, hex(int(val_rptr))), val_str)
             self.count = self.count + 1
             self.advance()
             return result
@@ -379,8 +400,41 @@ class Tree_Printer:
         self.value_type = self.l.type.template_argument(0)
 
     def to_string (self):
-        return (short_ns(template_name(self.l.type))
-                + '<' + str(self.value_type.strip_typedefs()) + '>')
+        res = ''
+        if self.l.qualifiers:
+            res += '(' + self.l.qualifiers + ')'
+        res += (short_ns(template_name(self.l.type)) +
+                '<' + str(self.value_type.strip_typedefs()) + '>')
+        return res
 
     def children (self):
         return self.Iterator(self.l)
+
+#@add_type_recognizer
+class Tree_Type_Recognizer:
+    "Type Recognizer for boost::intrusive::tree"
+    name = 'boost::intrusive::tree-1.55'
+    enabled = True
+
+    @staticmethod
+    def supports(t):
+        d = 5
+        while (d > 0 and isinstance(t, gdb.Type)
+               and template_name(t) != 'boost::intrusive::bstree_impl'):
+            try:
+                t = t.fields()[0].type
+            except:
+                return None
+            d -= 1
+        return d > 0 and isinstance(t, gdb.Type)
+
+    def recognize(self, t):
+        qualifiers = get_type_qualifiers(t)
+        basic_t = gdb.types.get_basic_type(t)
+        if not self.supports(basic_t):
+            return None
+        res = '%'
+        if qualifiers:
+            res += '(' + qualifiers + ')'
+        res += short_ns(template_name(basic_t)) + '<' + str(basic_t.template_argument(0)) + '>'
+        return res

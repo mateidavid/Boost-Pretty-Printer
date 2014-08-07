@@ -4,6 +4,8 @@ import gdb
 import gdb.types
 import gdb.printing
 
+from .utils import *
+
 # check "ptype/mtr" is supported
 gdb.execute('ptype/mtr void', True, True)
 
@@ -67,8 +69,10 @@ class Printer_Gen(object):
         self.subprinters.append(Printer_Gen.SubPrinter_Gen(Printer))
 
     def __call__(self, value):
-        v = GDB_Value_Wrapper(value)
-        v.basic_type = v.type.strip_typedefs()
+        qualifiers = get_type_qualifiers(value.type)
+        v = GDB_Value_Wrapper(value.cast(gdb.types.get_basic_type(value.type)))
+        v.qualifiers = qualifiers
+        v.basic_type = v.type
         for subprinter_gen in self.subprinters:
             printer = subprinter_gen(v)
             if printer != None:

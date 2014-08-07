@@ -3,6 +3,13 @@ import gdb
 
 from .common import *
 
+def execute(cmd):
+    #print('execute: ' + cmd, file=sys.stderr)
+    return gdb.execute(cmd)
+def parse_and_eval(cmd):
+    #print('parse_and_eval: ' + cmd, file=sys.stderr)
+    return gdb.parse_and_eval(cmd)
+
 # Ref:
 # http://code.activestate.com/recipes/410692/
 #
@@ -26,6 +33,26 @@ class switch(object):
         else:
             return False
 
+def get_type_qualifiers(t):
+    """Return the qualifiers of a gdb.Type: const, volatile, and reference."""
+    assert isinstance(t, gdb.Type), '"t" not a gdb.Type'
+    t = t.strip_typedefs()
+    qualifiers = ''
+    if t.code == gdb.TYPE_CODE_REF:
+        qualifiers = '&' + qualifiers
+        t = t.target()
+    if t == t.unqualified():
+        pass
+    elif t == t.unqualified().const():
+        qualifiers = 'c' + qualifiers
+    elif t == t.unqualified().volatile():
+        qualifiers = 'v' + qualifiers
+    elif t == t.unqualified().const().volatile():
+        qualifiers = 'cv' + qualifiers
+    else:
+        assert False, 'could not determine type qualifiers'
+    return qualifiers
+
 def template_name(t):
     """Get template name of type t."""
     assert isinstance(t, gdb.Type), 't is not a gdb.Type'
@@ -43,7 +70,7 @@ def save_value_as_variable(v, s):
     assert isinstance(v, gdb.Value), 'arg 1 not a gdb.Value'
     assert isinstance(s, str), 'arg 2 not a string'
     _aux_save_value_as_variable(v)
-    gdb.execute('set var ' + s + ' = $_aux_save_value_as_variable()')
+    execute('set var ' + s + ' = $_aux_save_value_as_variable()')
 
 def to_eval(val, var_name = None):
     """
@@ -71,9 +98,9 @@ def call_object_method(v, f, *args):
     args_to_eval = list()
     for arg in args:
         assert isinstance(arg, gdb.Value), 'extra argument %s not a gdb.Value' % i + 1
-        args_to_eval.append(to_eval(arg, '$_arg_%s' % i + 1))
-    return gdb.parse_and_eval(to_eval(v, '$_arg_0') + '.' + f
-                              + '(' + ', '.join(args_to_eval) + ')')
+        args_to_eval.append(to_eval(arg, '$_call_object_method_arg_%s' % i + 1))
+    return parse_and_eval(to_eval(v, '$_call_object_method_arg_0') + '.' + f
+                          + '(' + ', '.join(args_to_eval) + ')')
 
 # convenience function: $new(p, *args)
 #
@@ -89,20 +116,17 @@ class new_func(gdb.Function):
         t = p.type.strip_typedefs().target()
         type_name = str(t.strip_typedefs())
         # allocate object
-        cmd = 'set $_p = (%s *)malloc(sizeof(%s))' % (type_name, type_name)
-        #print('running: ' + cmd, file=sys.stderr)
-        gdb.execute(cmd)
+        execute('set $_new_func_p = (%s *)malloc(sizeof(%s))' % (type_name, type_name))
         # run constructor
         i = 0
         args_to_eval = list()
         for arg in args:
             assert isinstance(arg, gdb.Value), 'extra argument %s not a gdb.Value' % str(i + 1)
-            args_to_eval.append(to_eval(arg, '$_arg_%s' % str(i + 1)))
+            args_to_eval.append(to_eval(arg, '$_new_func_arg_%s' % str(i + 1)))
         constructor_name = template_name(t).split(':')[-1]
-        cmd = 'call $_p->' + constructor_name + '(' + ', '.join(args_to_eval) + ')'
-        #print('running: ' + cmd, file=sys.stderr)
-        gdb.execute(cmd)
-        return gdb.parse_and_eval('$_p')
+        execute('call $_new_func_p->' + constructor_name
+                + '(' + ', '.join(args_to_eval) + ')')
+        return parse_and_eval('$_new_func_p')
 _new = new_func()
 
 # convenience function: $delete(p)
@@ -115,21 +139,17 @@ class del_func(gdb.Function):
     def invoke(self, p):
         assert p.type.strip_typedefs().code == gdb.TYPE_CODE_PTR, '"p" is not a pointer'
         t = p.type.strip_typedefs().target()
-        save_value_as_variable(p, '$_p')
+        save_value_as_variable(p, '$_del_func_p')
         # run destructor first
         destructor_name = '~' + template_name(t).split(':')[-1]
-        cmd = 'call $_p->' + destructor_name + '()'
-        #print('running: ' + cmd, file=sys.stderr)
         try:
-            gdb.execute(cmd)
+            execute('call $_del_func_p->' + destructor_name + '()')
         except:
             #print('could not run destructor of type: ' + str(t), file=sys.stderr)
             pass
         # then deallocate
-        cmd = 'call free($_p)'
-        #print('running: ' + cmd, file=sys.stderr)
-        gdb.execute(cmd)
-        return gdb.parse_and_eval('(void)0')
+        execute('call free($_del_func_p)')
+        return parse_and_eval('(void)0')
 _del = del_func()
 
 # Bypass static method calls
@@ -183,11 +203,11 @@ def call_static_method(t, f, *args):
     args_to_eval = list()
     for arg in args:
         assert isinstance(arg, gdb.Value), 'extra argument %s not a gdb.Value' % i
-        args_to_eval.append(to_eval(arg, '$_arg_%s' % i))
+        args_to_eval.append(to_eval(arg, '$_call_static_method_arg_%s' % i))
     # eval in gdb
     cmd = str(t) + '::' + f + '(' + ', '.join(args_to_eval) + ')'
     try:
-        return gdb.parse_and_eval(cmd)
+        return parse_and_eval(cmd)
     except:
         print('call_static_method:\n' +
               '\tcall failed: ' + cmd + '\n' +
@@ -298,9 +318,10 @@ def get_raw_ptr(p):
     if f:
         return f(p)
 
-    save_value_as_variable(p, '$_p')
+    p_str = to_eval(p, '$_get_raw_ptr_p')
+    #save_value_as_variable(p, '$_p')
     try:
-        return gdb.parse_and_eval('$_p.operator->()')
+        return parse_and_eval(p_str +'.operator->()')
     except gdb.error:
         print('get_raw_ptr:\n'
               + '\tcall to operator->() failed on type: '
