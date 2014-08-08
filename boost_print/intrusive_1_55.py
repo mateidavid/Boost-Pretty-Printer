@@ -334,6 +334,8 @@ class Tree_Printer:
     @staticmethod
     def supports(v):
         t = v.type
+        if t.code != gdb.TYPE_CODE_STRUCT:
+            return None
         d = 5
         while (d > 0 and isinstance(t, gdb.Type)
                and template_name(t) != 'boost::intrusive::bstree_impl'):
