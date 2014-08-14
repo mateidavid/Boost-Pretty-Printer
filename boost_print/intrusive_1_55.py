@@ -398,24 +398,18 @@ class Tree_Printer:
                         break
 
     def __init__(self, l):
-        t = l.type
-        d = 5
-        while (d > 0 and isinstance(t, gdb.Type)
-               and template_name(t) != 'boost::intrusive::bstree_impl'):
-            t = t.fields()[0].type
-            d -= 1
-        if not (d > 0 and isinstance(t, gdb.Type)):
-            assert False, 'could not cast object into bstree_impl'
-        self.l = GDB_Value_Wrapper(l.cast(t))
-        self.l.qualifiers = l.qualifiers
-        self.value_type = self.l.type.template_argument(0)
+        self.l = l
 
     def to_string (self):
         res = ''
         if self.l.qualifiers:
             res += '(' + self.l.qualifiers + ')'
-        res += (short_ns(template_name(self.l.type)) +
-                '<' + str(self.value_type.strip_typedefs()) + '>')
+        if str(self.l.type).startswith('boost::intrusive::'):
+            value_type = self.l.type.template_argument(0)
+            res += (short_ns(template_name(self.l.type)) +
+                    '<' + str(value_type.strip_typedefs()) + '>')
+        else:
+            res += str(self.l.type)
         return res
 
     def children (self):
