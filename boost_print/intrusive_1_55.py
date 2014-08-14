@@ -278,7 +278,7 @@ class List_Printer:
             return self
 
         def __next__(self):
-            if self.crt_node_rptr == self.root_node_rptr:
+            if self.crt_node_rptr == self.root_node_rptr or is_null(self.crt_node_rptr):
                 raise StopIteration
             val_rptr = get_raw_ptr(call_static_method(
                 self.value_traits_t, 'to_value_ptr', self.crt_node_rptr))
