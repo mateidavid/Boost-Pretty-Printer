@@ -332,19 +332,23 @@ class Tree_Printer:
     enabled = True
 
     @staticmethod
-    def supports(v):
-        t = v.type
-        if t.code != gdb.TYPE_CODE_STRUCT:
-            return None
+    def get_bstree_impl_base(t):
         d = 5
-        while (d > 0 and isinstance(t, gdb.Type)
+        while (d > 0 and isinstance(t, gdb.Type) and t.code == gdb.TYPE_CODE_STRUCT
                and template_name(t) != 'boost::intrusive::bstree_impl'):
             try:
                 t = t.fields()[0].type
             except:
                 return None
             d -= 1
-        return d > 0 and isinstance(t, gdb.Type)
+        if d > 0 and isinstance(t, gdb.Type) and t.code == gdb.TYPE_CODE_STRUCT:
+            return t
+        else:
+            return None
+
+    @staticmethod
+    def supports(v):
+        return Tree_Printer.get_bstree_impl_base(v.type) != None
 
     class Iterator:
         def __init__(self, l):
@@ -413,7 +417,7 @@ class Tree_Printer:
         return res
 
     def children (self):
-        return self.Iterator(self.l)
+        return self.Iterator(self.l.cast(self.get_bstree_impl_base(self.l.type)))
 
 #@add_type_recognizer
 class Tree_Type_Recognizer:
