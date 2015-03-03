@@ -286,7 +286,7 @@ class List_Printer:
                 val_str = str(val_rptr.referenced_value())
             except:
                 val_str = 'N/A'
-            result = ('[%d @%s]' % (self.count, hex(int(val_rptr))), val_str)
+            result = ('[%d @%s]' % (self.count, print_ptr(val_rptr)), val_str)
             self.count = self.count + 1
             self.crt_node_rptr = get_raw_ptr(call_static_method(
                 self.node_traits_t, 'get_next', self.crt_node_rptr))
@@ -371,7 +371,7 @@ class Tree_Printer:
                 val_str = str(val_rptr.referenced_value())
             except:
                 val_str = 'N/A'
-            result = ('[%d @%s]' % (self.count, hex(int(val_rptr))), val_str)
+            result = ('[%d @%s]' % (self.count, print_ptr(val_rptr)), val_str)
             self.count = self.count + 1
             self.advance()
             return result

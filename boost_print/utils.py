@@ -332,6 +332,15 @@ def get_raw_ptr(p):
               file=sys.stderr)
         raise gdb.error
 
+def print_ptr(p):
+    """
+    If `p` is a pointer, print it in hex. Otherwise, invoke pretty printer.
+    """
+    if p.type.strip_typedefs().code == gdb.TYPE_CODE_PTR:
+        return hex(int(p))
+    else:
+        return str(p)
+
 # Null value checker
 #
 # key: str
@@ -381,3 +390,23 @@ def _add_to_dict(d, *keys):
             d[k] = obj
         return None
     return _aux_decorator
+
+# convenience function for printing specific elements in containers
+#
+class at_func(gdb.Function):
+    def __init__(self):
+        super(at_func, self).__init__('at')
+    def invoke(self, cont, idx=0):
+        assert isinstance(cont, gdb.Value), '"cont" not a gdb.Value'
+        p = gdb.default_visualizer(cont)
+        assert p, 'no printer for type [' + str(cont.type) + ']'
+        assert hasattr(p, 'children'), 'printer for type [' + str(cont.type) + '] has no children() function'
+        it = iter(p.children())
+        i = idx
+        while i > 0:
+            next(it)
+            i -= 1
+        _, val = next(it)
+        return str(val)
+
+_at = at_func()

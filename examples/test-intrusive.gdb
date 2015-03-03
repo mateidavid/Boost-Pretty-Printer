@@ -1,4 +1,5 @@
 set pagination off
+set trace-commands on
 py boost_print.add_trivial_printer("List_Obj", lambda v: v['_val'])
 py boost_print.add_trivial_printer("SList_Obj", lambda v: v['_val'])
 py boost_print.add_trivial_printer("Set_Obj", lambda v: v['_val'])
@@ -8,6 +9,8 @@ b done
 r
 p bh1_list_0
 p bh1_list_1
+p $at(bh1_list_1, 0)
+p $at(bh1_list_1, 1)
 p bh2_list_0
 p bh2_list_1
 p mh1_list_0
@@ -42,6 +45,11 @@ p bh1_set_0
 p bh1_set_1
 p bh2_set_0
 p bh2_set_1
+p $at(bh2_set_1, 0)
+p $at(bh2_set_1, 1)
+p $at(bh2_set_1, 2)
+p $at(bh2_set_1, 3)
+p $at(bh2_set_1, 4)
 p mh1_set_0
 p mh1_set_1
 p mh2_set_0
